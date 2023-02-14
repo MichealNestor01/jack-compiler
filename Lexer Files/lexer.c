@@ -10,8 +10,8 @@ I confirm that I will not publish the program online or share it with anyone wit
 
 Student Name: Micheal Nestor
 Student ID: 201492471
-Email:
-Date Work Commenced:
+Email: sc21mpn@leeds.ac.uk  
+Date Work Commenced: 14/02/2023s
 *************************************************************************/
 
 
@@ -39,7 +39,20 @@ Date Work Commenced:
 // if everything goes well the function should return 1
 int InitLexer (char* file_name)
 {
-  return 0;
+  // First check that the file given is a .jack file
+  int lenFileName = strlen(file_name);
+  char* fileExtension = ".jack";
+  for (
+    int extIndex = 0, fnIndex = lenFileName-5; 
+    extIndex < 5; 
+    extIndex++, fnIndex++
+    ) {
+    // if the extension does not match, return error 0.
+    if (file_name[fnIndex] != fileExtension[extIndex]) return 0; 
+  }
+  
+  // File extension matches, so return with no error
+  return 1;
 }
 
 
@@ -71,7 +84,10 @@ int main ()
 {
 	// implement your main function here
   // NOTE: the autograder will not use your main function
-
+  
+  // test the initialiser
+  InitLexer("hellowolrd.jack");
+  InitLexer("LOLOLOL");
   
 	return 0;
 }
