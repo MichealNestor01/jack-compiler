@@ -24,9 +24,13 @@ Date Work Commenced: 14/02/2023s
 
 // YOU CAN ADD YOUR OWN FUNCTIONS, DECLARATIONS AND VARIABLES HERE
 
+typedef struct {
+  FILE * filePointer;		// points to the file undergoing analysis
+  int initialised; // boolean value
+} Lexer;
 
-
-
+// set default values
+static Lexer lexerObj = {NULL, 0};
 
 
 // IMPLEMENT THE FOLLOWING functions
@@ -39,7 +43,11 @@ Date Work Commenced: 14/02/2023s
 // if everything goes well the function should return 1
 int InitLexer (char* file_name)
 {
-  // First check that the file given is a .jack file
+  // reset the lexerObj
+  lexerObj.filePointer = NULL;
+  lexerObj.initialised = 0;
+
+  // Check that the file given is a .jack file
   int lenFileName = strlen(file_name);
   char* fileExtension = ".jack";
   for (
@@ -47,11 +55,17 @@ int InitLexer (char* file_name)
     extIndex < 5; 
     extIndex++, fnIndex++
     ) {
-    // if the extension does not match, return error 0.
+    // if the extension does not match return 0, error.
     if (file_name[fnIndex] != fileExtension[extIndex]) return 0; 
   }
   
-  // File extension matches, so return with no error
+  // Open the file given, and link it to the static file pointer
+  lexerObj.filePointer = fopen(file_name, "r");
+  // if the filePointer is null return 0, error.
+  if (lexerObj.filePointer == NULL) return 0;
+
+  // All initialisation steps passed
+  lexerObj.initialised = 1;
   return 1;
 }
 
@@ -87,8 +101,11 @@ int main ()
   
   // test the initialiser
   InitLexer("hellowolrd.jack");
+  printf("%d\n", lexerObj.initialised);
   InitLexer("LOLOLOL");
-  
+  printf("%d\n", lexerObj.initialised);
+  InitLexer("Ball.jack");
+  printf("%d\n", lexerObj.initialised);
 	return 0;
 }
 // do not remove the next line
