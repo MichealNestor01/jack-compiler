@@ -24,6 +24,10 @@ Date Work Commenced: 14/02/2023s
 
 // YOU CAN ADD YOUR OWN FUNCTIONS, DECLARATIONS AND VARIABLES HERE
 
+// true and false macros
+#define true 1
+#define false 0
+
 typedef struct {
   FILE * filePointer;		// points to the file undergoing analysis
   int initialised; // boolean value
@@ -31,22 +35,34 @@ typedef struct {
 } Lexer;
 
 // set default values
-static Lexer lexerObj = {NULL, 0, 1};
+static Lexer lexerObj = {NULL, false, 1};
 
 // checks if a given character is white space
 int isWhiteSpace(unsigned char c) {
   if (c == ' ' || c == '\t' || c == '\r') {
-    return 1; // is white space
+    return true; 
   }
-  return 0; // is not not white space
+  return false; 
+}
+
+// checks if a given character is a symbol
+int isSymbol(unsigned int c) {
+  if (
+    (40 <= c && c <= 47) ||
+    (58 <= c && c <= 62) ||
+    (c == 126)
+  ) {
+    return true; 
+  } 
+  return false;
 }
 
 // this will move the file pointer past white space
 void skipWhiteSpace() { // skips past all the white space in the file
   unsigned char currentChar;
-  while (1) { // go past all white space
+  while (true) { // go past all white space
     currentChar = fgetc(lexerObj.filePointer);
-    if(isWhiteSpace(currentChar) == 0) { // found non white space
+    if(!isWhiteSpace(currentChar)) { // found non white space
       ungetc(currentChar, lexerObj.filePointer); 
       break;
     }
@@ -61,7 +77,7 @@ int skipComments() {
       current = fgetc(lexerObj.filePointer);
       if (current == '\n') lexerObj.currentLine++;
     } while (current != '\n' && current != EOF);
-  } else { // multi like comment 
+  } else if (current == '*') { // multi like comment 
     unsigned char tmp;
     do {
       // search until a '*' is found, then look for a '/'
@@ -72,6 +88,8 @@ int skipComments() {
       current = fgetc(lexerObj.filePointer);
       if (current == '\n') lexerObj.currentLine++;
     } while (current != '/' && current != EOF);
+  } else {
+    return 2; // not a comment
   }
   if (current == EOF) {
     return 1; // Error
@@ -85,21 +103,31 @@ unsigned char * getTokenString(unsigned char current) {
   unsigned int index = 0;
   do {
     token[index++] = current;
+    if (isSymbol(current)) return token;
     current = fgetc(lexerObj.filePointer);
-  } while (isWhiteSpace(current) == 0);
+    if (isSymbol(current)) {
+      ungetc(current, lexerObj.filePointer);
+      token[index] = '\0';
+      break;
+    }
+  } while (!isWhiteSpace(current));
   return token;
 }
 
 // generates tokens from the given file 
 void GenerateTokens() {
-  if (lexerObj.initialised == 0) return;
+  if (!lexerObj.initialised) return;
   int tokens = 0;
   while (1) { // loop through the file
     // skip white space
     skipWhiteSpace();
+    
+    unsigned char current = fgetc(lexerObj.filePointer);
+    if (current == EOF) {
+      break;
+    }
 
     // check if the there is a line break
-    unsigned char current = fgetc(lexerObj.filePointer);
     if (current == '\n') {
       lexerObj.currentLine++;
       continue;
@@ -108,14 +136,14 @@ void GenerateTokens() {
     // check if this is a comment
     if (current == '/') {
       int err = skipComments();
-      if (err) return;
-      continue;
+      if (err == 1) return; // eof
+      else if (err == 0) continue; // comment skipped
     }
 
     // we have reached something to tokenise
     unsigned char * tokenString = getTokenString(current);
     printf("Token %d: (%s) on line %d\n", tokens, tokenString, lexerObj.currentLine);
-    if (++tokens == 100) break;
+    tokens++;
   }
 
 }
@@ -153,7 +181,7 @@ int InitLexer (char* file_name)
   if (lexerObj.filePointer == NULL) return 0;
 
   // All initialisation steps passed
-  lexerObj.initialised = 1;
+  lexerObj.initialised = true;
   GenerateTokens();
   return 1;
 }
