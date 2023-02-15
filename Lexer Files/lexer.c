@@ -27,10 +27,50 @@ Date Work Commenced: 14/02/2023s
 typedef struct {
   FILE * filePointer;		// points to the file undergoing analysis
   int initialised; // boolean value
+  int currentLine;
 } Lexer;
 
 // set default values
-static Lexer lexerObj = {NULL, 0};
+static Lexer lexerObj = {NULL, 0, 0};
+
+int isWhiteSpace(unsigned char c) {
+  if (c == ' ' || c == '\t' || c == '\r') {
+    return 1; // found white space
+  }
+  return 0; // not white space
+}
+
+void skipWhiteSpace() { // skips past all the white space in the file
+  unsigned char currentChar;
+  while (1) { // go past all white space
+    currentChar = fgetc(lexerObj.filePointer);
+    if(isWhiteSpace(currentChar) == 0) {
+      ungetc(currentChar, lexerObj.filePointer); // put the character back
+      break;
+    }
+  }
+}
+
+void GenerateTokens() {
+  if (lexerObj.initialised == 0) return;
+  
+  while (1) { // loop through the file
+    // skip white space
+    skipWhiteSpace();
+
+    // check if the there is a line break
+    unsigned char current = fgetc(lexerObj.filePointer);
+    if (current == '\n') {
+      lexerObj.currentLine++;
+      continue;
+    }
+
+    
+    printf("First non white space: (%c) on line %d\n", current, lexerObj.currentLine);
+    break;
+  }
+
+}
 
 
 // IMPLEMENT THE FOLLOWING functions
@@ -66,6 +106,7 @@ int InitLexer (char* file_name)
 
   // All initialisation steps passed
   lexerObj.initialised = 1;
+  GenerateTokens();
   return 1;
 }
 
