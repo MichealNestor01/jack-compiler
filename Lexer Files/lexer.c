@@ -79,10 +79,21 @@ int skipComments() {
   return 0; // no error
 }
 
+// gets the current token pointed at by the file pointer
+unsigned char * getTokenString(unsigned char current) {
+  unsigned char * token = (char *) malloc(sizeof(char) * 100);
+  unsigned int index = 0;
+  do {
+    token[index++] = current;
+    current = fgetc(lexerObj.filePointer);
+  } while (isWhiteSpace(current) == 0);
+  return token;
+}
+
 // generates tokens from the given file 
 void GenerateTokens() {
   if (lexerObj.initialised == 0) return;
-  
+  int tokens = 0;
   while (1) { // loop through the file
     // skip white space
     skipWhiteSpace();
@@ -102,11 +113,9 @@ void GenerateTokens() {
     }
 
     // we have reached something to tokenise
-    unsigned char * tokenText = getToken();
-
-    
-    printf("First non white space: (%c) on line %d\n", current, lexerObj.currentLine);
-    break;
+    unsigned char * tokenString = getTokenString(current);
+    printf("Token %d: (%s) on line %d\n", tokens, tokenString, lexerObj.currentLine);
+    if (++tokens == 100) break;
   }
 
 }
