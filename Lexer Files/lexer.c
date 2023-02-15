@@ -33,13 +33,15 @@ typedef struct {
 // set default values
 static Lexer lexerObj = {NULL, 0, 1};
 
+// checks if a given character is white space
 int isWhiteSpace(unsigned char c) {
   if (c == ' ' || c == '\t' || c == '\r') {
-    return 1; // found white space
+    return 1; // is white space
   }
-  return 0; // not white space
+  return 0; // is not not white space
 }
 
+// this will move the file pointer past white space
 void skipWhiteSpace() { // skips past all the white space in the file
   unsigned char currentChar;
   while (1) { // go past all white space
@@ -51,6 +53,7 @@ void skipWhiteSpace() { // skips past all the white space in the file
   }
 }
 
+// this will move the file pointer past comments
 int skipComments() {
   unsigned char current = fgetc(lexerObj.filePointer);
   if (current == '/') { // inline comment
@@ -76,6 +79,7 @@ int skipComments() {
   return 0; // no error
 }
 
+// generates tokens from the given file 
 void GenerateTokens() {
   if (lexerObj.initialised == 0) return;
   
@@ -96,6 +100,9 @@ void GenerateTokens() {
       if (err) return;
       continue;
     }
+
+    // we have reached something to tokenise
+    unsigned char * tokenText = getToken();
 
     
     printf("First non white space: (%c) on line %d\n", current, lexerObj.currentLine);
