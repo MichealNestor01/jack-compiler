@@ -28,6 +28,14 @@ Date Work Commenced: 14/02/2023s
 #define true 1
 #define false 0
 
+// list of all reserved words
+const char RESERVED_WORDS[18][12] = {
+  "class", "constructor", "method", "function",
+  "int", "boolean", "char", "void",
+  "let", "do", "if", "else", "while", "return",
+  "true", "false", "null", "this"
+};
+
 typedef struct {
   FILE * filePointer;		// points to the file undergoing analysis
   int initialised; // boolean value
@@ -48,9 +56,11 @@ int isWhiteSpace(char c) {
 // checks if a given character is a symbol
 int isSymbol(unsigned int c) {
   if (
-    (40 <= c && c <= 47) ||
-    (58 <= c && c <= 62) ||
-    (c == 126)
+    (40 <= c && c <= 47) || // ( ) * + , - . /
+    (59 <= c && c <= 62) || // ; < = >
+    (c == 91) ||            // [ 
+    (c == 93) ||            // ]
+    (123 <= c && c <= 126)  // { | } ~
   ) {
     return true; 
   } 
@@ -101,8 +111,10 @@ int skipComments() {
 char * getTokenString(char current) {
   char * token = (char *) malloc(sizeof(char) * 100);
   unsigned int index = 0;
-  do {
+  unsigned int tokenIsString = false;
+  do { // You need to parse strings
     token[index++] = current;
+    if (current == '\"') { tokenIsString = true; break; }
     if (isSymbol(current)) return token;
     current = fgetc(lexerObj.filePointer);
     if (isSymbol(current)) {
@@ -111,7 +123,43 @@ char * getTokenString(char current) {
       break;
     }
   } while (!isWhiteSpace(current));
+  if (tokenIsString) {
+    do {
+      current = fgetc(lexerObj.filePointer);
+      token[index++] = current;
+    } while (current != '\"');
+  }
   return token;
+}
+
+Token classifyToken(char * tokenString) {
+  // check for string
+  if (tokenString[0] == '\"') {
+    // String!
+  }
+
+  // check for end of file
+
+
+  // check for symbol 
+  if (strlen(tokenString) == 1 && isSymbol(tokenString[0])) {
+    // Symbol!
+  }
+
+  // check for reserved word
+  for (int index = 0; index < 18; index++) {
+    if (strcmp(tokenString, RESERVED_WORDS[index])) {
+      // reserved word!
+    }
+  }
+
+  // check for integer
+
+
+  // check for error
+
+
+  return;
 }
 
 // generates tokens from the given file 
@@ -140,11 +188,14 @@ void GenerateTokens() {
     int end = false;
     char * tokenString;
     if (current == EOF) {
-      tokenString = "EOF";
+      tokenString = "End of File";
       end = true;
     } else {
       tokenString = getTokenString(current);
     }
+
+    // classify token
+    Token token = classifyToken(tokenString);
 
     printf("Token %d: (%s) on line %d\n", tokens, tokenString, lexerObj.currentLine);
     if (end) break;
@@ -226,7 +277,7 @@ int main ()
   printf("%d\n", lexerObj.initialised);
   InitLexer("LOLOLOL");
   printf("%d\n", lexerObj.initialised);
-  InitLexer("Ball.jack");
+  InitLexer("Main.jack");
   printf("%d\n", lexerObj.initialised);
 	return 0;
 }
