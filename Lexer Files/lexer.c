@@ -10,17 +10,15 @@ I confirm that I will not publish the program online or share it with anyone wit
 
 Student Name: Micheal Nestor
 Student ID: 201492471
-Email: sc21mpn@leeds.ac.uk  
+Email: sc21mpn@leeds.ac.uk
 Date Work Commenced: 14/02/2023s
 *************************************************************************/
-
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
 #include "lexer.h"
-
 
 // YOU CAN ADD YOUR OWN FUNCTIONS, DECLARATIONS AND VARIABLES HERE
 
@@ -30,15 +28,15 @@ Date Work Commenced: 14/02/2023s
 
 // list of all reserved words
 const char RESERVED_WORDS[18][12] = {
-  "class", "constructor", "method", "function",
-  "int", "boolean", "char", "void",
-  "let", "do", "if", "else", "while", "return",
-  "true", "false", "null", "this"
-};
+    "class", "constructor", "method", "function",
+    "int", "boolean", "char", "void",
+    "let", "do", "if", "else", "while", "return",
+    "true", "false", "null", "this"};
 
-typedef struct {
-  FILE * filePointer;		// points to the file undergoing analysis
-  int initialised; // boolean value
+typedef struct
+{
+  FILE *filePointer; // points to the file undergoing analysis
+  int initialised;   // boolean value
   int currentLine;
 } Lexer;
 
@@ -46,85 +44,116 @@ typedef struct {
 static Lexer lexerObj = {NULL, false, 1};
 
 // checks if a given character is white space
-int isWhiteSpace(char c) {
-  if (c == ' ' || c == '\t' || c == '\r') {
-    return true; 
+int isWhiteSpace(char c)
+{
+  if (c == ' ' || c == '\t' || c == '\r')
+  {
+    return true;
   }
-  return false; 
+  return false;
 }
 
 // checks if a given character is a symbol
-int isSymbol(unsigned int c) {
+int isSymbol(unsigned int c)
+{
   if (
-    (40 <= c && c <= 47) || // ( ) * + , - . /
-    (59 <= c && c <= 62) || // ; < = >
-    (c == 91) ||            // [ 
-    (c == 93) ||            // ]
-    (123 <= c && c <= 126)  // { | } ~
-  ) {
-    return true; 
-  } 
+      (40 <= c && c <= 47) || // ( ) * + , - . /
+      (59 <= c && c <= 62) || // ; < = >
+      (c == 91) ||            // [
+      (c == 93) ||            // ]
+      (123 <= c && c <= 126)  // { | } ~
+  )
+  {
+    return true;
+  }
   return false;
 }
 
 // this will move the file pointer past white space
-void skipWhiteSpace() { // skips past all the white space in the file
+void skipWhiteSpace()
+{ // skips past all the white space in the file
   char currentChar;
-  while (true) { // go past all white space
+  while (true)
+  { // go past all white space
     currentChar = fgetc(lexerObj.filePointer);
-    if(!isWhiteSpace(currentChar)) { // found non white space
-      ungetc(currentChar, lexerObj.filePointer); 
+    if (!isWhiteSpace(currentChar))
+    { // found non white space
+      ungetc(currentChar, lexerObj.filePointer);
       break;
     }
   }
 }
 
 // this will move the file pointer past comments
-int skipComments() {
+int skipComments()
+{
   char current = fgetc(lexerObj.filePointer);
-  if (current == '/') { // inline comment
-    do {
+  if (current == '/')
+  { // inline comment
+    do
+    {
       current = fgetc(lexerObj.filePointer);
-      if (current == '\n') lexerObj.currentLine++;
+      if (current == '\n')
+        lexerObj.currentLine++;
     } while (current != '\n' && current != EOF);
-  } else if (current == '*') { // multi like comment 
+  }
+  else if (current == '*')
+  { // multi like comment
     char tmp;
-    do {
+    do
+    {
       // search until a '*' is found, then look for a '/'
       tmp = fgetc(lexerObj.filePointer);
-      if (tmp == EOF) return 1;
-      if (tmp == '\n') lexerObj.currentLine++;
-      if (tmp != '*') continue;
+      if (tmp == EOF)
+        return 1;
+      if (tmp == '\n')
+        lexerObj.currentLine++;
+      if (tmp != '*')
+        continue;
       current = fgetc(lexerObj.filePointer);
-      if (current == '\n') lexerObj.currentLine++;
+      if (current == '\n')
+        lexerObj.currentLine++;
     } while (current != '/' && current != EOF);
-  } else {
-    return 2; // not a comment
   }
-  if (current == EOF) {
-    return 1; // Error
+  else
+  { // not a comment
+    return 2;
+  }
+  if (current == EOF)
+  { // Error
+    return 1;
   }
   return 0; // no error
 }
 
 // gets the current token pointed at by the file pointer
-char * getTokenString(char current) {
-  char * token = (char *) malloc(sizeof(char) * 100);
+char *getTokenString(char current)
+{
+  char *token = (char *)malloc(sizeof(char) * 100);
   unsigned int index = 0;
   unsigned int tokenIsString = false;
-  do { // You need to parse strings
+  do
+  { // You need to parse strings
     token[index++] = current;
-    if (current == '\"') { tokenIsString = true; break; }
-    if (isSymbol(current)) return token;
+    if (current == '\"')
+    {
+      tokenIsString = true;
+      break;
+    }
+    if (isSymbol(current))
+      return token;
     current = fgetc(lexerObj.filePointer);
-    if (isSymbol(current)) {
+    if (isSymbol(current))
+    {
       ungetc(current, lexerObj.filePointer);
       token[index] = '\0';
       break;
     }
   } while (!isWhiteSpace(current));
-  if (tokenIsString) {
-    do {
+  if (tokenIsString)
+  {
+    do
+    {
       current = fgetc(lexerObj.filePointer);
       token[index++] = current;
     } while (current != '\"');
@@ -132,65 +161,75 @@ char * getTokenString(char current) {
   return token;
 }
 
-Token classifyToken(char * tokenString) {
+Token classifyToken(char *tokenString)
+{
   // check for string
-  if (tokenString[0] == '\"') {
+  if (tokenString[0] == '\"')
+  {
     // String!
   }
 
   // check for end of file
 
-
-  // check for symbol 
-  if (strlen(tokenString) == 1 && isSymbol(tokenString[0])) {
+  // check for symbol
+  if (strlen(tokenString) == 1 && isSymbol(tokenString[0]))
+  {
     // Symbol!
   }
 
   // check for reserved word
-  for (int index = 0; index < 18; index++) {
-    if (strcmp(tokenString, RESERVED_WORDS[index])) {
+  for (int index = 0; index < 18; index++)
+  {
+    if (strcmp(tokenString, RESERVED_WORDS[index]))
+    {
       // reserved word!
     }
   }
 
   // check for integer
 
-
   // check for error
-
 
   return;
 }
 
-// generates tokens from the given file 
-void GenerateTokens() {
-  if (!lexerObj.initialised) return;
+// generates tokens from the given file
+void GenerateTokens()
+{
+  if (!lexerObj.initialised)
+    return;
   int tokens = 0;
-  while (1) { // loop through the file
+  while (1)
+  { // loop through the file
     // skip white space
     skipWhiteSpace();
     char current = fgetc(lexerObj.filePointer);
 
-    // check if the there is a line break
-    if (current == '\n') {
+    if (current == '\n')
+    { // check if the there is a line break
       lexerObj.currentLine++;
       continue;
     }
 
-    // check if this is a comment
-    if (current == '/') {
+    if (current == '/')
+    { // check if this is a comment
       int err = skipComments();
-      if (err == 1) return; // eof
-      else if (err == 0) continue; // comment skipped
+      if (err == 1)
+        return; // eof
+      else if (err == 0)
+        continue; // comment skipped
     }
 
     // we have reached something to tokenise
     int end = false;
-    char * tokenString;
-    if (current == EOF) {
+    char *tokenString;
+    if (current == EOF)
+    {
       tokenString = "End of File";
       end = true;
-    } else {
+    }
+    else
+    {
       tokenString = getTokenString(current);
     }
 
@@ -198,12 +237,11 @@ void GenerateTokens() {
     Token token = classifyToken(tokenString);
 
     printf("Token %d: (%s) on line %d\n", tokens, tokenString, lexerObj.currentLine);
-    if (end) break;
+    if (end)
+      break;
     tokens++;
   }
-
 }
-
 
 // IMPLEMENT THE FOLLOWING functions
 //***********************************
@@ -213,7 +251,7 @@ void GenerateTokens() {
 // This requires opening the file and making any necessary initialisations of the lexer
 // If an error occurs, the function should return 0
 // if everything goes well the function should return 1
-int InitLexer (char* file_name)
+int InitLexer(char *file_name)
 {
   // reset the lexerObj
   lexerObj.filePointer = NULL;
@@ -221,20 +259,21 @@ int InitLexer (char* file_name)
 
   // Check that the file given is a .jack file
   int lenFileName = strlen(file_name);
-  char* fileExtension = ".jack";
+  char *fileExtension = ".jack";
   for (
-    int extIndex = 0, fnIndex = lenFileName-5; 
-    extIndex < 5; 
-    extIndex++, fnIndex++
-    ) {
-    // if the extension does not match return 0, error.
-    if (file_name[fnIndex] != fileExtension[extIndex]) return 0; 
+      int extIndex = 0, fnIndex = lenFileName - 5;
+      extIndex < 5;
+      extIndex++, fnIndex++)
+  { // if the extension does not match return 0, error.
+    if (file_name[fnIndex] != fileExtension[extIndex])
+      return 0;
   }
-  
+
   // Open the file given, and link it to the static file pointer
   lexerObj.filePointer = fopen(file_name, "r");
   // if the filePointer is null return 0, error.
-  if (lexerObj.filePointer == NULL) return 0;
+  if (lexerObj.filePointer == NULL)
+    return 0;
 
   // All initialisation steps passed
   lexerObj.initialised = true;
@@ -242,17 +281,16 @@ int InitLexer (char* file_name)
   return 1;
 }
 
-
 // Get the next token from the source file
-Token GetNextToken ()
+Token GetNextToken()
 {
-	Token t;
+  Token t;
   t.tp = ERR;
   return t;
 }
 
 // peek (look) at the next token in the source file without removing it from the stream
-Token PeekNextToken ()
+Token PeekNextToken()
 {
   Token t;
   t.tp = ERR;
@@ -260,16 +298,16 @@ Token PeekNextToken ()
 }
 
 // clean out at end, e.g. close files, free memory, ... etc
-int StopLexer ()
+int StopLexer()
 {
-	return 0;
+  return 0;
 }
 
 // do not remove the next line
 #ifndef TEST
-int main ()
+int main()
 {
-	// implement your main function here
+  // implement your main function here
   // NOTE: the autograder will not use your main function
 
   // test the initialiser
@@ -279,7 +317,7 @@ int main ()
   printf("%d\n", lexerObj.initialised);
   InitLexer("Main.jack");
   printf("%d\n", lexerObj.initialised);
-	return 0;
+  return 0;
 }
 // do not remove the next line
 #endif
