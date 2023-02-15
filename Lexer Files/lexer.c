@@ -31,7 +31,7 @@ typedef struct {
 } Lexer;
 
 // set default values
-static Lexer lexerObj = {NULL, 0, 0};
+static Lexer lexerObj = {NULL, 0, 1};
 
 int isWhiteSpace(unsigned char c) {
   if (c == ' ' || c == '\t' || c == '\r') {
@@ -44,11 +44,36 @@ void skipWhiteSpace() { // skips past all the white space in the file
   unsigned char currentChar;
   while (1) { // go past all white space
     currentChar = fgetc(lexerObj.filePointer);
-    if(isWhiteSpace(currentChar) == 0) {
-      ungetc(currentChar, lexerObj.filePointer); // put the character back
+    if(isWhiteSpace(currentChar) == 0) { // found non white space
+      ungetc(currentChar, lexerObj.filePointer); 
       break;
     }
   }
+}
+
+int skipComments() {
+  unsigned char current = fgetc(lexerObj.filePointer);
+  if (current == '/') { // inline comment
+    do {
+      current = fgetc(lexerObj.filePointer);
+      if (current == '\n') lexerObj.currentLine++;
+    } while (current != '\n' && current != EOF);
+  } else { // multi like comment 
+    unsigned char tmp;
+    do {
+      // search until a '*' is found, then look for a '/'
+      tmp = fgetc(lexerObj.filePointer);
+      if (tmp == EOF) return 1;
+      if (tmp == '\n') lexerObj.currentLine++;
+      if (tmp != '*') continue;
+      current = fgetc(lexerObj.filePointer);
+      if (current == '\n') lexerObj.currentLine++;
+    } while (current != '/' && current != EOF);
+  }
+  if (current == EOF) {
+    return 1; // Error
+  }
+  return 0; // no error
 }
 
 void GenerateTokens() {
@@ -62,6 +87,13 @@ void GenerateTokens() {
     unsigned char current = fgetc(lexerObj.filePointer);
     if (current == '\n') {
       lexerObj.currentLine++;
+      continue;
+    }
+
+    // check if this is a comment
+    if (current == '/') {
+      int err = skipComments();
+      if (err) return;
       continue;
     }
 
@@ -139,7 +171,7 @@ int main ()
 {
 	// implement your main function here
   // NOTE: the autograder will not use your main function
-  
+
   // test the initialiser
   InitLexer("hellowolrd.jack");
   printf("%d\n", lexerObj.initialised);
