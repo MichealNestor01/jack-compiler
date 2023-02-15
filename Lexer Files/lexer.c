@@ -38,7 +38,7 @@ typedef struct {
 static Lexer lexerObj = {NULL, false, 1};
 
 // checks if a given character is white space
-int isWhiteSpace(unsigned char c) {
+int isWhiteSpace(char c) {
   if (c == ' ' || c == '\t' || c == '\r') {
     return true; 
   }
@@ -59,7 +59,7 @@ int isSymbol(unsigned int c) {
 
 // this will move the file pointer past white space
 void skipWhiteSpace() { // skips past all the white space in the file
-  unsigned char currentChar;
+  char currentChar;
   while (true) { // go past all white space
     currentChar = fgetc(lexerObj.filePointer);
     if(!isWhiteSpace(currentChar)) { // found non white space
@@ -71,14 +71,14 @@ void skipWhiteSpace() { // skips past all the white space in the file
 
 // this will move the file pointer past comments
 int skipComments() {
-  unsigned char current = fgetc(lexerObj.filePointer);
+  char current = fgetc(lexerObj.filePointer);
   if (current == '/') { // inline comment
     do {
       current = fgetc(lexerObj.filePointer);
       if (current == '\n') lexerObj.currentLine++;
     } while (current != '\n' && current != EOF);
   } else if (current == '*') { // multi like comment 
-    unsigned char tmp;
+    char tmp;
     do {
       // search until a '*' is found, then look for a '/'
       tmp = fgetc(lexerObj.filePointer);
@@ -98,8 +98,8 @@ int skipComments() {
 }
 
 // gets the current token pointed at by the file pointer
-unsigned char * getTokenString(unsigned char current) {
-  unsigned char * token = (char *) malloc(sizeof(char) * 100);
+char * getTokenString(char current) {
+  char * token = (char *) malloc(sizeof(char) * 100);
   unsigned int index = 0;
   do {
     token[index++] = current;
@@ -121,12 +121,11 @@ void GenerateTokens() {
   while (1) { // loop through the file
     // skip white space
     skipWhiteSpace();
-    
-    unsigned char current = fgetc(lexerObj.filePointer);
+    char current = fgetc(lexerObj.filePointer);
     if (current == EOF) {
+      printf("Token %d: (%s) on line %d\n", tokens, "END OF FILE", lexerObj.currentLine);
       break;
     }
-
     // check if the there is a line break
     if (current == '\n') {
       lexerObj.currentLine++;
@@ -141,7 +140,7 @@ void GenerateTokens() {
     }
 
     // we have reached something to tokenise
-    unsigned char * tokenString = getTokenString(current);
+    char * tokenString = getTokenString(current);
     printf("Token %d: (%s) on line %d\n", tokens, tokenString, lexerObj.currentLine);
     tokens++;
   }
