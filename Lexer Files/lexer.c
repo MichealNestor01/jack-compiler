@@ -122,10 +122,7 @@ void GenerateTokens() {
     // skip white space
     skipWhiteSpace();
     char current = fgetc(lexerObj.filePointer);
-    if (current == EOF) {
-      printf("Token %d: (%s) on line %d\n", tokens, "END OF FILE", lexerObj.currentLine);
-      break;
-    }
+
     // check if the there is a line break
     if (current == '\n') {
       lexerObj.currentLine++;
@@ -140,8 +137,17 @@ void GenerateTokens() {
     }
 
     // we have reached something to tokenise
-    char * tokenString = getTokenString(current);
+    int end = false;
+    char * tokenString;
+    if (current == EOF) {
+      tokenString = "EOF";
+      end = true;
+    } else {
+      tokenString = getTokenString(current);
+    }
+
     printf("Token %d: (%s) on line %d\n", tokens, tokenString, lexerObj.currentLine);
+    if (end) break;
     tokens++;
   }
 
