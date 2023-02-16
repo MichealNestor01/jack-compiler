@@ -22,6 +22,12 @@ Date Work Commenced: 14/02/2023s
 
 // YOU CAN ADD YOUR OWN FUNCTIONS, DECLARATIONS AND VARIABLES HERE
 
+/*
+  TODO LIST:
+    - what if eof in string
+    - make error tokens work, currently they are seen as identifiers
+*/
+
 // true and false macros
 #define true 1
 #define false 0
@@ -36,13 +42,13 @@ const char RESERVED_WORDS[18][12] = {
 typedef struct
 {
   FILE *filePointer; // points to the file undergoing analysis
-  char *filename;
+  char filename[32];
   int initialised; // boolean value
   int currentLine;
 } Lexer;
 
 // set default values
-static Lexer lexerObj = {NULL, false, 1};
+static Lexer lexerObj = {NULL, "", false, 1};
 
 // convert token type enum to a string
 char *getSymbolString(TokenType type)
@@ -71,7 +77,7 @@ char *getSymbolString(TokenType type)
 // format a token
 void printToken(Token *token)
 {
-  printf("< %s, %d, %s, %s >",
+  printf("< %s, %d, %s, %s >\n",
          token->fl,
          token->ln,
          token->lx,
@@ -193,6 +199,11 @@ char *getTokenString(char current)
       current = fgetc(lexerObj.filePointer);
       token[index++] = current;
     } while (current != '\"');
+    for (int i = 0; i < index - 2; i++)
+    { // remove the "'s
+      token[i] = token[i + 1];
+    }
+    token[index - 2] = '\0';
   }
   return token;
 }
@@ -204,10 +215,10 @@ Token *classifyToken(char *tokenString)
   // initialise the token
   Token *token = (Token *)malloc(sizeof(Token));
   strncpy(token->lx, tokenString, 128);
-  token->lx[tokenStringLength - 1] = '\0';
+  token->lx[tokenStringLength] = '\0';
   token->ln = lexerObj.currentLine;
   strncpy(token->fl, lexerObj.filename, 32);
-  token->fl[strlen(lexerObj.filename) - 1] = '\0';
+  token->fl[strlen(lexerObj.filename)] = '\0';
 
   // check for string
   if (tokenString[0] == '\"')
@@ -318,8 +329,7 @@ int InitLexer(char *file_name)
   int lenFileName = strlen(file_name);
   // reset the lexerObj
   lexerObj.filePointer = NULL;
-  strncpy(file_name, lexerObj.filename, 128);
-  lexerObj.filename[lenFileName - 1] = '\0';
+  strncpy(lexerObj.filename, file_name, 32);
   lexerObj.initialised = 0;
 
   // Check that the file given is a .jack file
