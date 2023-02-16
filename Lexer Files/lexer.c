@@ -134,24 +134,25 @@ int skipComments()
   }
   else if (current == '*')
   { // multi like comment
-    char tmp;
+    char next;
     do
-    {
-      // search until a '*' is found, then look for a '/'
-      tmp = fgetc(lexerObj.filePointer);
-      if (tmp == EOF)
-        return 1;
-      if (tmp == '\n')
-        lexerObj.currentLine++;
-      if (tmp != '*')
-        continue;
+    { // search until a '*' is found, then look for a '/'
+      // get the next char
       current = fgetc(lexerObj.filePointer);
+      // check if it is a new line or EOF
       if (current == '\n')
         lexerObj.currentLine++;
-    } while (current != '/' && current != EOF);
+      else if (current == '*')
+      { // possible end of current
+        next = fgetc(lexerObj.filePointer);
+        if (next != '/')
+          ungetc(current, lexerObj.filePointer);
+      }
+    } while (next != '/' && current != EOF);
   }
   else
-  { // not a comment
+  { // not a comment so put the current back
+    ungetc(current, lexerObj.filePointer);
     return 2;
   }
   if (current == EOF)
