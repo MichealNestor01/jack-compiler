@@ -36,12 +36,47 @@ const char RESERVED_WORDS[18][12] = {
 typedef struct
 {
   FILE *filePointer; // points to the file undergoing analysis
-  int initialised;   // boolean value
+  char *filename;
+  int initialised; // boolean value
   int currentLine;
 } Lexer;
 
 // set default values
 static Lexer lexerObj = {NULL, false, 1};
+
+// convert token type enum to a string
+char *getSymbolString(TokenType type)
+{
+  switch (type)
+  {
+  case RESWORD:
+    return "RESWORD";
+  case ID:
+    return "ID";
+  case INT:
+    return "INT";
+  case SYMBOL:
+    return "SYMBOL";
+  case STRING:
+    return "STRING";
+  case EOFile:
+    return "EOFile";
+  case ERR:
+    return "ERR";
+
+  default:
+    return "__Error__";
+  }
+}
+// format a token
+void printToken(Token *token)
+{
+  printf("< %s, %d, %s, %s >",
+         token->fl,
+         token->ln,
+         token->lx,
+         getSymbolString(token->tp));
+}
 
 // checks if a given character is white space
 int isWhiteSpace(char c)
@@ -129,7 +164,7 @@ int skipComments()
 // gets the current token pointed at by the file pointer
 char *getTokenString(char current)
 {
-  char *token = (char *)malloc(sizeof(char) * 100);
+  char *token = (char *)malloc(sizeof(char) * 128);
   unsigned int index = 0;
   unsigned int tokenIsString = false;
   do
@@ -161,36 +196,61 @@ char *getTokenString(char current)
   return token;
 }
 
-Token classifyToken(char *tokenString)
+Token *classifyToken(char *tokenString)
 {
+  unsigned int tokenStringLength = strlen(tokenString);
+
+  // initialise the token
+  Token *token = (Token *)malloc(sizeof(Token));
+  strncpy(token->lx, tokenString, 128);
+  token->lx[tokenStringLength - 1] = '\0';
+  token->ln = lexerObj.currentLine;
+  strncpy(token->fl, lexerObj.filename, 32);
+  token->fl[strlen(lexerObj.filename) - 1] = '\0';
+
   // check for string
   if (tokenString[0] == '\"')
   {
-    // String!
+    token->tp = STRING;
+    return token;
   }
 
   // check for end of file
+  if (strcmp(tokenString, "End of File") == 0)
+  {
+    token->tp = EOFile;
+    return token;
+  }
 
   // check for symbol
-  if (strlen(tokenString) == 1 && isSymbol(tokenString[0]))
+  if (tokenStringLength == 1 && isSymbol(tokenString[0]))
   {
-    // Symbol!
+    token->tp = SYMBOL;
+    return token;
+  }
+
+  // check for integer
+  if (atoi(tokenString) != 0 || (tokenString[0] == '0' && tokenStringLength == 1))
+  {
+    token->tp = INT;
+    return token;
   }
 
   // check for reserved word
   for (int index = 0; index < 18; index++)
   {
-    if (strcmp(tokenString, RESERVED_WORDS[index]))
+    if (strcmp(tokenString, RESERVED_WORDS[index]) == 0)
     {
-      // reserved word!
+      token->tp = RESWORD;
+      return token;
     }
   }
 
-  // check for integer
+  // else token is an identifier
+  token->tp = ID;
+  return token;
 
-  // check for error
-
-  return;
+  // going to need to check for error somehow
 }
 
 // generates tokens from the given file
@@ -234,9 +294,10 @@ void GenerateTokens()
     }
 
     // classify token
-    Token token = classifyToken(tokenString);
+    Token *token = classifyToken(tokenString);
+    printToken(token);
 
-    printf("Token %d: (%s) on line %d\n", tokens, tokenString, lexerObj.currentLine);
+    // printf("Token %d: (%s) on line %d\n", tokens, tokenString, lexerObj.currentLine);
     if (end)
       break;
     tokens++;
@@ -253,12 +314,14 @@ void GenerateTokens()
 // if everything goes well the function should return 1
 int InitLexer(char *file_name)
 {
+  int lenFileName = strlen(file_name);
   // reset the lexerObj
   lexerObj.filePointer = NULL;
+  strncpy(file_name, lexerObj.filename, 128);
+  lexerObj.filename[lenFileName - 1] = '\0';
   lexerObj.initialised = 0;
 
   // Check that the file given is a .jack file
-  int lenFileName = strlen(file_name);
   char *fileExtension = ".jack";
   for (
       int extIndex = 0, fnIndex = lenFileName - 5;
