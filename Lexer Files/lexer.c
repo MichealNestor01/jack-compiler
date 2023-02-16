@@ -39,16 +39,30 @@ const char RESERVED_WORDS[18][12] = {
     "let", "do", "if", "else", "while", "return",
     "true", "false", "null", "this"};
 
+typedef struct TokenStreamItem TokenStreamItem;
+struct TokenStreamItem
+{
+  Token *token;
+  TokenStreamItem *next;
+};
+
+typedef struct
+{
+  TokenStreamItem *head;
+  TokenStreamItem *current;
+} TokenStream;
+
 typedef struct
 {
   FILE *filePointer; // points to the file undergoing analysis
   char filename[32];
   int initialised; // boolean value
   int currentLine;
+  TokenStream stream;
 } Lexer;
 
 // set default values
-static Lexer lexerObj = {NULL, "", false, 1};
+static Lexer lexerObj = {NULL, "", false, 1, {NULL, NULL}};
 
 // convert token type enum to a string
 char *getSymbolString(TokenType type)
@@ -69,19 +83,26 @@ char *getSymbolString(TokenType type)
     return "EOFile";
   case ERR:
     return "ERR";
-
   default:
     return "__Error__";
   }
 }
 // format a token
-void printToken(Token *token)
+void printTokenPointer(Token *token)
 {
   printf("< %s, %d, %s, %s >\n",
          token->fl,
          token->ln,
          token->lx,
          getSymbolString(token->tp));
+}
+void printToken(Token token)
+{
+  printf("< %s, %d, %s, %s >\n",
+         token.fl,
+         token.ln,
+         token.lx,
+         getSymbolString(token.tp));
 }
 
 // checks if a given character is white space
@@ -307,13 +328,30 @@ void GenerateTokens()
 
     // classify token
     Token *token = classifyToken(tokenString);
-    printToken(token);
+    // printToken(token);
+
+    // add token to the linked token list
+    TokenStreamItem *item = (TokenStreamItem *)malloc(sizeof(TokenStreamItem));
+    item->token = token;
+    if (lexerObj.stream.head == NULL)
+    {
+      lexerObj.stream.current = item;
+      lexerObj.stream.current->next = NULL;
+      lexerObj.stream.head = item;
+    }
+    else
+    {
+      lexerObj.stream.current->next = item;
+      lexerObj.stream.current = item;
+      lexerObj.stream.current->next = NULL;
+    }
 
     // printf("Token %d: (%s) on line %d\n", tokens, tokenString, lexerObj.currentLine);
     if (end)
       break;
     tokens++;
   }
+  lexerObj.stream.current = lexerObj.stream.head;
 }
 
 // IMPLEMENT THE FOLLOWING functions
@@ -357,18 +395,19 @@ int InitLexer(char *file_name)
 
 // Get the next token from the source file
 Token GetNextToken()
-{
-  Token t;
-  t.tp = ERR;
+{ // This doesn't deal with the end of the file
+  Token t = *(lexerObj.stream.current->token);
+  if (lexerObj.stream.current->next != NULL)
+  {
+    lexerObj.stream.current = lexerObj.stream.current->next;
+  }
   return t;
 }
 
 // peek (look) at the next token in the source file without removing it from the stream
 Token PeekNextToken()
 {
-  Token t;
-  t.tp = ERR;
-  return t;
+  return *(lexerObj.stream.current->token);
 }
 
 // clean out at end, e.g. close files, free memory, ... etc
@@ -385,12 +424,13 @@ int main()
   // NOTE: the autograder will not use your main function
 
   // test the initialiser
-  InitLexer("hellowolrd.jack");
-  printf("%d\n", lexerObj.initialised);
-  InitLexer("LOLOLOL");
-  printf("%d\n", lexerObj.initialised);
   InitLexer("Main.jack");
-  printf("%d\n", lexerObj.initialised);
+
+  while (PeekNextToken().tp != EOFile)
+  {
+    printToken(GetNextToken());
+  }
+
   return 0;
 }
 // do not remove the next line
