@@ -206,10 +206,14 @@ char *getTokenString(char current)
     if (isSymbol(current))
       return token;
     current = fgetc(lexerObj.filePointer);
-    if (isSymbol(current))
+    if (current == EOF)
     {
       ungetc(current, lexerObj.filePointer);
-      token[index] = '\0';
+      break;
+    }
+    else if (isSymbol(current))
+    {
+      ungetc(current, lexerObj.filePointer);
       break;
     }
   } while (!isWhiteSpace(current));
@@ -224,8 +228,11 @@ char *getTokenString(char current)
     { // remove the "'s
       token[i] = token[i + 1];
     }
-    token[index - 2] = '\0';
+    // set the end index to point to the first " at the end of the string.
+    index -= 2;
   }
+  // close the end of the token with EOS
+  token[index] = '\0';
   return token;
 }
 
