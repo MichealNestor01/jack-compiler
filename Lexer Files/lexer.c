@@ -196,7 +196,7 @@ char *getTokenString(char current)
   unsigned int index = 0;
   unsigned int tokenIsString = false;
   do
-  { // You need to parse strings
+  {
     token[index++] = current;
     if (current == '\"')
     {
