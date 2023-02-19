@@ -33,11 +33,28 @@ Date Work Commenced: 14/02/2023s
 #define false 0
 
 // list of all reserved words
-const char RESERVED_WORDS[18][12] = {
-    "class", "constructor", "method", "function",
-    "int", "boolean", "char", "void",
-    "let", "do", "if", "else", "while", "return",
-    "true", "false", "null", "this"};
+const char RESERVED_WORDS[20][12] = {
+    "class",
+    "constructor",
+    "method",
+    "function",
+    "int",
+    "boolean",
+    "char",
+    "void",
+    "let",
+    "do",
+    "if",
+    "else",
+    "while",
+    "return",
+    "true",
+    "false",
+    "null",
+    "this",
+    "var",
+    "field",
+};
 
 typedef struct TokenStreamItem TokenStreamItem;
 struct TokenStreamItem
@@ -133,6 +150,7 @@ int isWhiteSpace(char c)
 int isSymbol(unsigned int c)
 {
   if (
+      (c == 38) ||            // &
       (40 <= c && c <= 47) || // ( ) * + , - . /
       (59 <= c && c <= 62) || // ; < = >
       (c == 91) ||            // [
@@ -255,12 +273,6 @@ char *getTokenString(char current, LexErrCodes code)
       current = fgetc(lexerObj.filePointer);
       token[index++] = current;
     } while (current != '\"');
-    for (int i = 0; i < index - 2; i++)
-    { // remove the "'s
-      token[i] = token[i + 1];
-    }
-    // set the end index to point to the first " at the end of the string.
-    index -= 2;
   }
   // close the end of the token with EOS
   token[index] = '\0';
@@ -290,6 +302,14 @@ Token *classifyToken(char *tokenString, LexErrCodes code)
   if (token->lx[0] == '\"')
   {
     token->tp = STRING;
+    // remove the " from the token lexeme
+    int len = strlen(token->lx);
+    for (int i = 0; i < len - 2; i++)
+    { // remove the "'s
+      token->lx[i] = token->lx[i + 1];
+    }
+    // set the end " to \0
+    token->lx[len - 2] = '\0';
     return token;
   }
 
@@ -315,7 +335,7 @@ Token *classifyToken(char *tokenString, LexErrCodes code)
   }
 
   // check for reserved word
-  for (int index = 0; index < 18; index++)
+  for (int index = 0; index < 20; index++)
   {
     if (strcmp(token->lx, RESERVED_WORDS[index]) == 0)
     {
