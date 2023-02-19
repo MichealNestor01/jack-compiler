@@ -164,7 +164,6 @@ void skipWhiteSpace()
 int skipComments()
 {
   char current = fgetc(lexerObj.filePointer);
-  printf("start of comment: (%c)\n", current);
   if (current == '/')
   { // inline comment
     do
@@ -197,7 +196,6 @@ int skipComments()
     ungetc(current, lexerObj.filePointer);
     return 2;
   }
-  printf("end of comment: (%c)\n", current);
   if (current == EOF)
   { // Error
     return 1;
@@ -483,12 +481,23 @@ int main(int argc, char **argv)
 
   // test the initialiser
 
-  InitLexer("EofInComment.jack");
+  InitLexer(argv[1]);
 
-  while (PeekNextToken().tp != EOFile)
+  FILE *output = fopen(argv[2], "w");
+  do
   {
-    printToken(GetNextToken());
-  }
+    Token token = GetNextToken();
+    fprintf(output, "< %s, %d, %s, %s >\n",
+            token.fl,
+            token.ln,
+            token.lx,
+            getSymbolString(token.tp));
+    if (token.tp == EOFile)
+    {
+      break;
+    }
+  } while (true);
+  fclose(output);
 
   return 0;
 
