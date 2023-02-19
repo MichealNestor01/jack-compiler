@@ -105,6 +105,20 @@ void printToken(Token token)
          getSymbolString(token.tp));
 }
 
+// memory cleanup
+void freeTokenStream()
+{
+  TokenStreamItem *current = lexerObj.stream.head;
+  TokenStreamItem *next;
+  do
+  {
+    TokenStreamItem *next = current->next;
+    // free(current->token);
+    // free(current);
+    current = next;
+  } while (current != NULL);
+}
+
 // checks if a given character is white space
 int isWhiteSpace(char c)
 {
@@ -150,6 +164,7 @@ void skipWhiteSpace()
 int skipComments()
 {
   char current = fgetc(lexerObj.filePointer);
+  printf("start of comment: (%c)\n", current);
   if (current == '/')
   { // inline comment
     do
@@ -173,7 +188,7 @@ int skipComments()
       { // possible end of current
         next = fgetc(lexerObj.filePointer);
         if (next != '/')
-          ungetc(current, lexerObj.filePointer);
+          ungetc(next, lexerObj.filePointer);
       }
     } while (next != '/' && current != EOF);
   }
@@ -182,6 +197,7 @@ int skipComments()
     ungetc(current, lexerObj.filePointer);
     return 2;
   }
+  printf("end of comment: (%c)\n", current);
   if (current == EOF)
   { // Error
     return 1;
@@ -190,9 +206,26 @@ int skipComments()
 }
 
 // gets the current token pointed at by the file pointer
-char *getTokenString(char current)
+char *getTokenString(char current, LexErrCodes code)
 {
   char *token = (char *)malloc(sizeof(char) * 128);
+  if (code != -1)
+  { // error, so return related error code
+    switch (code)
+    {
+    case EofInCom:
+      return "End of file in comment";
+    case NewLnInStr:
+      return "New line in string literal";
+    case EofInStr:
+      return "End of file in string literal";
+    case IllSym:
+      return "Illegal symbol in source file";
+    default:
+      break;
+    }
+  }
+
   unsigned int index = 0;
   unsigned int tokenIsString = false;
   do
@@ -236,7 +269,7 @@ char *getTokenString(char current)
   return token;
 }
 
-Token *classifyToken(char *tokenString)
+Token *classifyToken(char *tokenString, LexErrCodes code)
 {
   unsigned int tokenStringLength = strlen(tokenString);
 
@@ -248,29 +281,36 @@ Token *classifyToken(char *tokenString)
   strncpy(token->fl, lexerObj.filename, 32);
   token->fl[strlen(lexerObj.filename)] = '\0';
 
+  // check for error
+  if (code != -1)
+  {
+    token->tp = ERR;
+    return token;
+  }
+
   // check for string
-  if (tokenString[0] == '\"')
+  if (token->lx[0] == '\"')
   {
     token->tp = STRING;
     return token;
   }
 
   // check for end of file
-  if (strcmp(tokenString, "End of File") == 0)
+  if (strcmp(token->lx, "End of File") == 0)
   {
     token->tp = EOFile;
     return token;
   }
 
   // check for symbol
-  if (tokenStringLength == 1 && isSymbol(tokenString[0]))
+  if (tokenStringLength == 1 && isSymbol(token->lx[0]))
   {
     token->tp = SYMBOL;
     return token;
   }
 
   // check for integer
-  if (atoi(tokenString) != 0 || (tokenString[0] == '0' && tokenStringLength == 1))
+  if (atoi(token->lx) != 0 || (token->lx[0] == '0' && tokenStringLength == 1))
   {
     token->tp = INT;
     return token;
@@ -279,7 +319,7 @@ Token *classifyToken(char *tokenString)
   // check for reserved word
   for (int index = 0; index < 18; index++)
   {
-    if (strcmp(tokenString, RESERVED_WORDS[index]) == 0)
+    if (strcmp(token->lx, RESERVED_WORDS[index]) == 0)
     {
       token->tp = RESWORD;
       return token;
@@ -297,13 +337,16 @@ Token *classifyToken(char *tokenString)
 void GenerateTokens()
 {
   if (!lexerObj.initialised)
-    return;
+    freeTokenStream();
   int tokens = 0;
+  LexErrCodes error = -1;
+  char *tokenString;
   while (1)
   { // loop through the file
     // skip white space
     skipWhiteSpace();
     char current = fgetc(lexerObj.filePointer);
+    error = -1;
 
     if (current == '\n')
     { // check if the there is a line break
@@ -314,15 +357,18 @@ void GenerateTokens()
     if (current == '/')
     { // check if this is a comment
       int err = skipComments();
-      if (err == 1)
-        return; // eof
-      else if (err == 0)
+      if (err == 0)
+      {
         continue; // comment skipped
+      }
+      else if (err == 1)
+      {
+        error = EofInCom;
+      }
     }
 
     // we have reached something to tokenise
     int end = false;
-    char *tokenString;
     if (current == EOF)
     {
       tokenString = "End of File";
@@ -330,12 +376,11 @@ void GenerateTokens()
     }
     else
     {
-      tokenString = getTokenString(current);
+      tokenString = getTokenString(current, error);
     }
 
     // classify token
-    Token *token = classifyToken(tokenString);
-    // printToken(token);
+    Token *token = classifyToken(tokenString, error);
 
     // add token to the linked token list
     TokenStreamItem *item = (TokenStreamItem *)malloc(sizeof(TokenStreamItem));
@@ -371,6 +416,11 @@ void GenerateTokens()
 // if everything goes well the function should return 1
 int InitLexer(char *file_name)
 {
+  if (lexerObj.initialised)
+  { // free the old token stream
+    freeTokenStream();
+  }
+
   int lenFileName = strlen(file_name);
   // reset the lexerObj
   lexerObj.filePointer = NULL;
@@ -397,6 +447,7 @@ int InitLexer(char *file_name)
   // All initialisation steps passed
   lexerObj.initialised = true;
   GenerateTokens();
+  fclose(lexerObj.filePointer);
   return 1;
 }
 
@@ -425,18 +476,34 @@ int StopLexer()
 
 // do not remove the next line
 #ifndef TEST
-int main()
+int main(int argc, char **argv)
 {
   // implement your main function here
   // NOTE: the autograder will not use your main function
 
   // test the initialiser
-  InitLexer("Main.jack");
+
+  InitLexer("EofInComment.jack");
 
   while (PeekNextToken().tp != EOFile)
   {
     printToken(GetNextToken());
   }
+
+  return 0;
+
+  freeTokenStream();
+
+  printf("\n\n\n\nNEW INIT\n\n\n\n");
+
+  InitLexer("EofInComment.jack");
+
+  while (PeekNextToken().tp != EOFile)
+  {
+    printToken(GetNextToken());
+  }
+
+  freeTokenStream();
 
   return 0;
 }
