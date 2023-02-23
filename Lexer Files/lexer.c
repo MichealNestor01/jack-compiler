@@ -33,7 +33,7 @@ Date Work Commenced: 14/02/2023s
 #define false 0
 
 // list of all reserved words
-const char RESERVED_WORDS[20][12] = {
+const char RESERVED_WORDS[21][12] = {
     "class",
     "constructor",
     "method",
@@ -54,6 +54,7 @@ const char RESERVED_WORDS[20][12] = {
     "this",
     "var",
     "field",
+    "static",
 };
 
 typedef struct TokenStreamItem TokenStreamItem;
@@ -163,6 +164,18 @@ int isSymbol(unsigned int c)
   return false;
 }
 
+int isAllowedChar(unsigned int c)
+{
+  if (
+      (48 <= c && c <= 57) ||
+      (65 <= c && c <= 90) ||
+      (97 <= c && c <= 122))
+  {
+    return true;
+  }
+  return false;
+}
+
 // this will move the file pointer past white space
 void skipWhiteSpace()
 { // skips past all the white space in the file
@@ -230,13 +243,13 @@ char *getTokenString(char current, LexErrCodes code)
     switch (code)
     {
     case EofInCom:
-      return "End of file in comment";
+      return "Error: unexpected eof in comment";
     case NewLnInStr:
-      return "New line in string literal";
+      return "Error: unexpected new line in string literal";
     case EofInStr:
-      return "End of file in string literal";
+      return "Error: unexpected eof in string literal";
     case IllSym:
-      return "Illegal symbol in source file";
+      return "Error: illegal symbol in source file";
     default:
       break;
     }
@@ -285,10 +298,10 @@ Token *classifyToken(char *tokenString, LexErrCodes code)
 
   // initialise the token
   Token *token = (Token *)malloc(sizeof(Token));
-  strncpy(token->lx, tokenString, 128);
+  strcpy(token->lx, tokenString);
   token->lx[tokenStringLength] = '\0';
   token->ln = lexerObj.currentLine;
-  strncpy(token->fl, lexerObj.filename, 32);
+  strcpy(token->fl, lexerObj.filename);
   token->fl[strlen(lexerObj.filename)] = '\0';
 
   // check for error
@@ -321,10 +334,19 @@ Token *classifyToken(char *tokenString, LexErrCodes code)
   }
 
   // check for symbol
-  if (tokenStringLength == 1 && isSymbol(token->lx[0]))
+  if (tokenStringLength == 1)
   {
-    token->tp = SYMBOL;
-    return token;
+    if (isSymbol(token->lx[0]))
+    {
+      token->tp = SYMBOL;
+      return token;
+    }
+    else if (!isAllowedChar(token->lx[0]))
+    { // unsupported symbol
+      token->tp = ERR;
+      strcpy(token->lx, getTokenString('0', IllSym));
+      return token;
+    }
   }
 
   // check for integer
@@ -335,7 +357,7 @@ Token *classifyToken(char *tokenString, LexErrCodes code)
   }
 
   // check for reserved word
-  for (int index = 0; index < 20; index++)
+  for (int index = 0; index < 21; index++)
   {
     if (strcmp(token->lx, RESERVED_WORDS[index]) == 0)
     {
@@ -372,6 +394,8 @@ void GenerateTokens()
       continue;
     }
 
+    // end dictates whether we have reached the end of the file
+    int end = false;
     if (current == '/')
     { // check if this is a comment
       int err = skipComments();
@@ -382,11 +406,11 @@ void GenerateTokens()
       else if (err == 1)
       {
         error = EofInCom;
+        end = true;
       }
     }
 
     // we have reached something to tokenise
-    int end = false;
     if (current == EOF)
     {
       tokenString = "End of File";
@@ -416,8 +440,7 @@ void GenerateTokens()
       lexerObj.stream.current->next = NULL;
     }
 
-    // printf("Token %d: (%s) on line %d\n", tokens, tokenString, lexerObj.currentLine);
-    if (end)
+    if (end || token->tp == ERR)
       break;
     tokens++;
   }
@@ -512,7 +535,7 @@ int main(int argc, char **argv)
             token.ln,
             token.lx,
             getSymbolString(token.tp));
-    if (token.tp == EOFile)
+    if (token.tp == EOFile || token.tp == ERR)
     {
       break;
     }
