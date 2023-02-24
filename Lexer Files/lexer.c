@@ -245,9 +245,9 @@ char *getTokenString(char current, LexErrCodes code)
     case EofInCom:
       return "Error: unexpected eof in comment";
     case NewLnInStr:
-      return "Error: unexpected new line in string literal";
+      return "Error: unexpected new line in string constant";
     case EofInStr:
-      return "Error: unexpected eof in string literal";
+      return "Error: unexpected eof in string constant";
     case IllSym:
       return "Error: illegal symbol in source file";
     default:
@@ -284,6 +284,16 @@ char *getTokenString(char current, LexErrCodes code)
     do
     {
       current = fgetc(lexerObj.filePointer);
+      if (current == EOF)
+      {                     // handle eof in string
+        char *crtrn = "\r"; // this would have been eaten as white space
+        return crtrn;
+      }
+      else if (current == '\n')
+      { // handle eol in string
+        char *endl = "\n";
+        return endl;
+      }
       token[index++] = current;
     } while (current != '\"');
   }
@@ -419,6 +429,16 @@ void GenerateTokens()
     else
     {
       tokenString = getTokenString(current, error);
+      if (tokenString[0] == '\r')
+      {
+        tokenString = getTokenString(current, EofInStr);
+        error = EofInStr;
+      }
+      else if (tokenString[0] == '\n')
+      {
+        tokenString = getTokenString(current, NewLnInStr);
+        error = NewLnInStr;
+      }
     }
 
     // classify token
