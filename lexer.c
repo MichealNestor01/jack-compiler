@@ -164,6 +164,15 @@ int isSymbol(unsigned int c)
   return false;
 }
 
+int isInt(unsigned int c)
+{
+  if (48 <= c && c <= 57)
+  {
+    return true;
+  }
+  return false;
+}
+
 int isAllowedChar(unsigned int c)
 {
   if (
@@ -244,7 +253,7 @@ char *getTokenString(char current, LexErrCodes code)
     case EofInCom:
       return "Error: unexpected eof in comment";
     case NewLnInStr:
-      return "Error: unexpected new line in string constant";
+      return "Error: new line in string constant";
     case EofInStr:
       return "Error: unexpected eof in string constant";
     case IllSym:
@@ -365,7 +374,16 @@ Token *classifyToken(char *tokenString, LexErrCodes code)
   }
 
   // check for integer
-  if (atoi(token->lx) != 0 || (token->lx[0] == '0' && tokenStringLength == 1))
+  int isInteger = true;
+  for (int i = 0; i < tokenStringLength; i++)
+  {
+    if (!isInt(token->lx[i]))
+    {
+      isInteger = false;
+      break;
+    }
+  }
+  if (isInteger)
   {
     token->tp = INT;
     return token;
@@ -550,7 +568,6 @@ int main(int argc, char **argv)
   // NOTE: the autograder will not use your main function
 
   // test the initialiser
-
   InitLexer(argv[1]);
 
   FILE *output = fopen(argv[2], "w");
@@ -570,33 +587,6 @@ int main(int argc, char **argv)
   fclose(output);
 
   return 0;
-
-  /*
-
-  printf("\n\n\n\nNEW INIT\n\n\n\n");
-
-  InitLexer("./testfiles/Main.jack");
-
-  do
-  {
-    printToken(GetNextToken());
-  } while (PeekNextToken().tp != EOFile && PeekNextToken().tp != ERR);
-
-  StopLexer();
-
-  printf("\n\n\n\nNEW INIT\n\n\n\n");
-
-  InitLexer("./testfiles/EofInStr.jack");
-
-  do
-  {
-    printToken(GetNextToken());
-  } while (PeekNextToken().tp != EOFile && PeekNextToken().tp != ERR);
-
-  StopLexer();
-
-  return 0;
-  */
 }
 // do not remove the next line
 #endif
