@@ -434,13 +434,11 @@ void GenerateTokens()
       tokenString = getTokenString(current, error);
       if (tokenString[0] == '\r')
       {
-        free(tokenString);
         tokenString = getTokenString(current, EofInStr);
         error = EofInStr;
       }
       else if (tokenString[0] == '\n')
       {
-        free(tokenString);
         tokenString = getTokenString(current, NewLnInStr);
         error = NewLnInStr;
       }
@@ -588,7 +586,7 @@ int main(int argc, char **argv)
 
   printf("\n\n\n\nNEW INIT\n\n\n\n");
 
-  InitLexer("./testfiles/EofInComment.jack");
+  InitLexer("./testfiles/EofInStr.jack");
 
   do
   {
