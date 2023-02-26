@@ -131,8 +131,8 @@ void freeTokenStream()
   do
   {
     TokenStreamItem *next = current->next;
-    // free(current->token);
-    // free(current);
+    free(current->token);
+    free(current);
     current = next;
   } while (current != NULL);
 }
@@ -237,7 +237,6 @@ int skipComments()
 // gets the current token pointed at by the file pointer
 char *getTokenString(char current, LexErrCodes code)
 {
-  char *token = (char *)malloc(sizeof(char) * 128);
   if (code != -1)
   { // error, so return related error code
     switch (code)
@@ -254,7 +253,8 @@ char *getTokenString(char current, LexErrCodes code)
       break;
     }
   }
-
+  /// char *token = (char *)malloc(sizeof(char) * 128);
+  char *token = (char *)malloc(sizeof(char) * 128);
   unsigned int index = 0;
   unsigned int tokenIsString = false;
   do
@@ -266,7 +266,7 @@ char *getTokenString(char current, LexErrCodes code)
       break;
     }
     if (isSymbol(current))
-      return token;
+      break;
     current = fgetc(lexerObj.filePointer);
     if (current == EOF)
     {
@@ -286,11 +286,13 @@ char *getTokenString(char current, LexErrCodes code)
       current = fgetc(lexerObj.filePointer);
       if (current == EOF)
       {                     // handle eof in string
+        free(token);        // token wont be used
         char *crtrn = "\r"; // this would have been eaten as white space
         return crtrn;
       }
       else if (current == '\n')
-      { // handle eol in string
+      {              // handle eol in string
+        free(token); // token wont be used
         char *endl = "\n";
         return endl;
       }
@@ -309,10 +311,10 @@ Token *classifyToken(char *tokenString, LexErrCodes code)
   // initialise the token
   Token *token = (Token *)malloc(sizeof(Token));
   strcpy(token->lx, tokenString);
-  token->lx[tokenStringLength] = '\0';
+  // token->lx[tokenStringLength] = '\0';
   token->ln = lexerObj.currentLine;
   strcpy(token->fl, lexerObj.filename);
-  token->fl[strlen(lexerObj.filename)] = '\0';
+  // token->fl[strlen(lexerObj.filename)] = '\0';
 
   // check for error
   if (code != -1)
@@ -320,6 +322,16 @@ Token *classifyToken(char *tokenString, LexErrCodes code)
     token->tp = ERR;
     return token;
   }
+
+  // check for end of file
+  if (strcmp(token->lx, "End of File") == 0)
+  {
+    token->tp = EOFile;
+    return token;
+  }
+
+  // if the tokenString is an error it will have no allocated memory
+  free(tokenString);
 
   // check for string
   if (token->lx[0] == '\"')
@@ -333,13 +345,6 @@ Token *classifyToken(char *tokenString, LexErrCodes code)
     }
     // set the end " to \0
     token->lx[len - 2] = '\0';
-    return token;
-  }
-
-  // check for end of file
-  if (strcmp(token->lx, "End of File") == 0)
-  {
-    token->tp = EOFile;
     return token;
   }
 
@@ -386,8 +391,6 @@ Token *classifyToken(char *tokenString, LexErrCodes code)
 // generates tokens from the given file
 void GenerateTokens()
 {
-  if (!lexerObj.initialised)
-    freeTokenStream();
   int tokens = 0;
   LexErrCodes error = -1;
   char *tokenString;
@@ -431,11 +434,13 @@ void GenerateTokens()
       tokenString = getTokenString(current, error);
       if (tokenString[0] == '\r')
       {
+        free(tokenString);
         tokenString = getTokenString(current, EofInStr);
         error = EofInStr;
       }
       else if (tokenString[0] == '\n')
       {
+        free(tokenString);
         tokenString = getTokenString(current, NewLnInStr);
         error = NewLnInStr;
       }
@@ -478,15 +483,15 @@ void GenerateTokens()
 int InitLexer(char *file_name)
 {
   if (lexerObj.initialised)
-  { // free the old token stream
-    freeTokenStream();
+  { // uninitialise the lexer, if this is called to clear old data
+    StopLexer();
   }
 
   int lenFileName = strlen(file_name);
   // reset the lexerObj
   lexerObj.filePointer = NULL;
-  strncpy(lexerObj.filename, file_name, 32);
-  lexerObj.initialised = 0;
+  strcpy(lexerObj.filename, file_name);
+  lexerObj.initialised = false;
 
   // Check that the file given is a .jack file
   char *fileExtension = ".jack";
@@ -523,7 +528,7 @@ Token GetNextToken()
   return t;
 }
 
-// peek (look) at the next token in the source file without removing it from the stream
+// peek (look) at the next token in the source file withoutd removing it from the stream
 Token PeekNextToken()
 {
   return *(lexerObj.stream.current->token);
@@ -532,6 +537,10 @@ Token PeekNextToken()
 // clean out at end, e.g. close files, free memory, ... etc
 int StopLexer()
 {
+  // free the token stream
+  freeTokenStream();
+  // reset all lexerObj values
+  lexerObj = (Lexer){NULL, "", false, 1, {NULL, NULL}};
   return 0;
 }
 
@@ -564,20 +573,32 @@ int main(int argc, char **argv)
 
   return 0;
 
-  freeTokenStream();
+  /*
 
   printf("\n\n\n\nNEW INIT\n\n\n\n");
 
-  InitLexer("EofInComment.jack");
+  InitLexer("./testfiles/Main.jack");
 
-  while (PeekNextToken().tp != EOFile)
+  do
   {
     printToken(GetNextToken());
-  }
+  } while (PeekNextToken().tp != EOFile && PeekNextToken().tp != ERR);
 
-  freeTokenStream();
+  StopLexer();
+
+  printf("\n\n\n\nNEW INIT\n\n\n\n");
+
+  InitLexer("./testfiles/EofInComment.jack");
+
+  do
+  {
+    printToken(GetNextToken());
+  } while (PeekNextToken().tp != EOFile && PeekNextToken().tp != ERR);
+
+  StopLexer();
 
   return 0;
+  */
 }
 // do not remove the next line
 #endif
