@@ -53,10 +53,53 @@ ParserInfo returnStatment();
 // Expressions Grammar:
 // expresion→ relationalEpression {( & | | ) relationalExpression }
 ParserInfo expression();
-// relationalExpression→ ArithmeticExpression {( = | > | < ) ArithmeticExpression )
-ParserInfo relationalExpression();
-// ArithmeticExpression → term {( + | - ) term }
-ParserInfo arithmeticExpression();
+// relationalExpression→ arithmeticExpression {( = | > | < ) arithmeticExpression }
+ParserInfo relationalExpression()
+{
+	// arithmeticExpression
+	ParserInfo info = arithmeticExpression();
+	if (info.er != none)
+		return info;
+	// {( = | > | < ) arithmeticExpression }
+	Token next_token = PeekNextToken();
+	while ((strcmp(next_token.lx, "=") *
+			strcmp(next_token.lx, "<") *
+			strcmp(next_token.lx, ">")) == 0)
+	{
+		// eat the token
+		GetNextToken();
+		// arithmeticExpression
+		info = arithmeticExpression();
+		if (info.er != none)
+			return info;
+		next_token = PeekNextToken();
+	}
+	// no error encountered
+	return InfoNoError;
+}
+// arithmeticExpression → term {( + | - ) term }
+ParserInfo arithmeticExpression()
+{
+	// term
+	ParserInfo info = term();
+	if (info.er != none)
+		return info;
+	// {( + | - ) term }
+	Token next_token = PeekNextToken();
+	while ((strcmp(next_token.lx, "+") *
+			strcmp(next_token.lx, "-")) == 0)
+	{
+		// eat the token
+		GetNextToken();
+		// term
+		info = term();
+		if (info.er != none)
+			return info;
+		next_token = PeekNextToken();
+	}
+	// no error encountered
+	return InfoNoError;
+}
 // term → factor {( * | / ) factor }
 ParserInfo term()
 {
@@ -66,7 +109,8 @@ ParserInfo term()
 		return info;
 	// {( * | / ) factor }
 	Token next_token = PeekNextToken();
-	while ((strcmp(next_token.lx, "*") * strcmp(next_token.lx, "/")) == 0)
+	while ((strcmp(next_token.lx, "*") *
+			strcmp(next_token.lx, "/")) == 0)
 	{
 		// eat the token
 		GetNextToken();
@@ -84,7 +128,8 @@ ParserInfo factor()
 {
 	Token next_token = PeekNextToken();
 	// - or ~
-	if (strcmp(next_token.lx, "-") == 0 || strcmp(next_token.lx, "~" == 0))
+	if ((strcmp(next_token.lx, "-") *
+		 strcmp(next_token.lx, "~")) == 0)
 	{
 		// eat the token before checking the operand
 		GetNextToken();
