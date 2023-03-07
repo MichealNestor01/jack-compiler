@@ -49,10 +49,45 @@ ParserInfo subroutineCall();
 // expressoinList → expression {, expression }|ϵ
 ParserInfo expressionList();
 // returnStatement → return [ expression ];
-ParserInfo returnStatment();
+ParserInfo returnStatment()
+{
+	Token next_token = GetNextToken();
+	// return
+	if (strcmp(next_token.lx, "return") == 0)
+		return InfoNoError;
+	else
+		return (ParserInfo){syntaxError, next_token};
+	// [ expression ]
+	Token next_token = PeekNextToken();
+	// to check if it is an expression, you need to go all the
+	// way down to factor to check for ~ and -
+	// then further down to factor to check
+	// Draw this out as this does not seem possible
+}
 // Expressions Grammar:
-// expresion→ relationalEpression {( & | | ) relationalExpression }
-ParserInfo expression();
+// expresion→ relationalExpression {( & | | ) relationalExpression }
+ParserInfo expression()
+{
+	// relationalExpression
+	ParserInfo info = relationalExpression();
+	if (info.er != none)
+		return info;
+	// {( & | | ) relationalExpression }
+	Token next_token = PeekNextToken();
+	while ((strcmp(next_token.lx, "&") *
+			strcmp(next_token.lx, "|")) == 0)
+	{
+		// eat the token
+		GetNextToken();
+		// arithmeticExpression
+		info = relationalExpression();
+		if (info.er != none)
+			return info;
+		next_token = PeekNextToken();
+	}
+	// no error encountered
+	return InfoNoError;
+}
 // relationalExpression→ arithmeticExpression {( = | > | < ) arithmeticExpression }
 ParserInfo relationalExpression()
 {
