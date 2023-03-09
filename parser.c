@@ -47,7 +47,13 @@ ParserInfo doStatement();
 // subroutineCall → identifier [.identifier] ( expressionList )
 ParserInfo subroutineCall();
 // expressoinList → expression {, expression }|ϵ
-ParserInfo expressionList();
+ParserInfo expressionList()
+{
+	ParserInfo info = expression();
+	if (info.er != none)
+		return info;
+	// finish this lol
+};
 // returnStatement → return [ expression ];
 ParserInfo returnStatment()
 {
@@ -57,8 +63,26 @@ ParserInfo returnStatment()
 		return InfoNoError;
 	else
 		return (ParserInfo){syntaxError, next_token};
+	// [ expression ];
+	next_token = PeekNextToken();
+	// if the next token is a ;, then there was no expression
+	// else check for an expression.
+	if (strcmp(next_token.lx, ";") == 0)
+	{
+		GetNextToken();
+		return InfoNoError;
+	}
 	// [ expression ]
-	Token next_token = PeekNextToken();
+	ParserInfo info = expression();
+	if (info.er != none)
+		return info;
+	// ;
+	next_token = GetNextToken();
+	if (strcmp(next_token.lx, ";") != 0)
+	{
+		return (ParserInfo){semicolonExpected, next_token};
+	}
+	return InfoNoError
 	// to check if it is an expression, you need to go all the
 	// way down to factor to check for ~ and -
 	// then further down to factor to check
@@ -179,16 +203,13 @@ ParserInfo dotIdentifier()
 {
 	Token next_token = GetNextToken();
 	// .
-	if (strcmp(next_token.lx, ".") == 0)
-		return InfoNoError;
-	else
+	if (strcmp(next_token.lx, ".") != 0)
 		return (ParserInfo){syntaxError, next_token};
 	// identifier
 	next_token = GetNextToken();
-	if (next_token.tp == ID)
-		return InfoNoError;
-	else
+	if (next_token.tp != ID)
 		return (ParserInfo){idExpected, next_token};
+	return InfoNoError;
 }
 // operand → integerConstant | identifier [.identifier][[ expression ]|( expressionList ) ] | ( expression ) | stringLiteral | true | false | null | this
 ParserInfo operand()
