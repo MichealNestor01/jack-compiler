@@ -45,24 +45,65 @@ ParserInfo whileStatement();
 // doStatement → do subroutineCall ;
 ParserInfo doStatement();
 // subroutineCall → identifier [.identifier] ( expressionList )
-ParserInfo subroutineCall();
+ParserInfo subroutineCall()
+{
+	// identifier
+	Token next_token = GetNextToken();
+	if (next_token.tp != ID)
+	{
+		return (ParserInfo){idExpected, next_token};
+	}
+	next_token = PeekNextToken();
+	// [ .identifier ]
+	if (strcmp(next_token.lx, ".") == 0)
+	{
+		ParserInfo info = dotIdentifier();
+		if (info.er != none)
+			return info;
+	}
+	// (
+	next_token = GetNextToken();
+	if (strcmp(next_token.lx, "(") != 0)
+	{
+		return (ParserInfo){openParenExpected, next_token};
+	}
+	// expressionList
+	ParserInfo info = expressionList();
+	if (info.er != none)
+		return info;
+	// )
+	next_token = GetNextToken();
+	if (strcmp(next_token.lx, ")") != 0)
+	{
+		return (ParserInfo){openParenExpected, next_token};
+	}
+}
 // expressoinList → expression {, expression }|ϵ
 ParserInfo expressionList()
 {
 	ParserInfo info = expression();
 	if (info.er != none)
 		return info;
-	// finish this lol
+	// {, expression }
+	while (strcmp(PeekNextToken().lx, ",") == 0)
+	{
+		// eat the ","
+		GetNextToken();
+		// expression
+		ParserInfo info = expression();
+		if (info.er != none)
+			return info;
+	}
 };
 // returnStatement → return [ expression ];
 ParserInfo returnStatment()
 {
 	Token next_token = GetNextToken();
 	// return
-	if (strcmp(next_token.lx, "return") == 0)
-		return InfoNoError;
-	else
+	if (strcmp(next_token.lx, "return") != 0)
+	{
 		return (ParserInfo){syntaxError, next_token};
+	}
 	// [ expression ];
 	next_token = PeekNextToken();
 	// if the next token is a ;, then there was no expression
@@ -82,11 +123,7 @@ ParserInfo returnStatment()
 	{
 		return (ParserInfo){semicolonExpected, next_token};
 	}
-	return InfoNoError
-	// to check if it is an expression, you need to go all the
-	// way down to factor to check for ~ and -
-	// then further down to factor to check
-	// Draw this out as this does not seem possible
+	return InfoNoError;
 }
 // Expressions Grammar:
 // expresion→ relationalExpression {( & | | ) relationalExpression }
