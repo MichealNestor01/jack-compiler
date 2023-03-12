@@ -33,12 +33,95 @@ ParserInfo paramList();
 ParserInfo subroutineBody();
 // Statement Grammar:
 // wrappedZeroOrMoreStatements → { { statement } }
-ParserInfo zeroOrMoreStatements();
+ParserInfo wrappedZeroOrMoreStatements()
+{
+	// {
+	Token next_token = GetNextToken();
+	if (strcmp(next_token.lx, "{") != 0)
+	{
+		return (ParserInfo){openBraceExpected, next_token};
+	}
+	// statement
+	while (statement().er == none)
+		;
+	// }
+	next_token = GetNextToken();
+	if (strcmp(next_token.lx, "{") != 0)
+	{
+		return (ParserInfo){closeBraceExpected, next_token};
+	}
+	return InfoNoError;
+}
 // statement → varDeclarStatement | letStatemnt | ifStatement | whileStatement | doStatement | returnStatemnt
-ParserInfo statement();
+ParserInfo statement()
+{
+	Token next_token = PeekNextToken();
+	if (strcmp(next_token.lx, "var") == 0)
+	{
+		return varDeclarStatement();
+	}
+	else if (strcmp(next_token.lx, "let") == 0)
+	{
+		return letStatement();
+	}
+	else if (strcmp(next_token.lx, "if") == 0)
+	{
+		return ifStatement();
+	}
+	else if (strcmp(next_token.lx, "while") == 0)
+	{
+		return whileStatement();
+	}
+	else if (strcmp(next_token.lx, "do") == 0)
+	{
+		return doStatement();
+	}
+	else if (strcmp(next_token.lx, "return") == 0)
+	{
+		return returnStatement();
+	}
+	return (ParserInfo){syntaxError, next_token};
+}
 // varDeclarStatement→var type identifier {, identifier };
 ParserInfo varDeclarStatement()
 {
+	// var
+	Token next_token = GetNextToken();
+	if (strcmp(next_token.lx, "var") != 0)
+	{
+		return (ParserInfo){syntaxError, next_token};
+	}
+	// type
+	Token next_token = GetNextToken();
+	if (strcmp(next_token.lx, "type") != 0)
+	{
+		return (ParserInfo){syntaxError, next_token};
+	}
+	// identifier
+	next_token = GetNextToken();
+	if (next_token.tp != ID)
+	{
+		return (ParserInfo){idExpected, next_token};
+	}
+	// {, identifier }
+	while (strcmp(PeekNextToken().lx, ",") == 0)
+	{
+		// eat the ","
+		GetNextToken();
+		// identifier
+		next_token = GetNextToken();
+		if (next_token.tp != ID)
+		{
+			return (ParserInfo){idExpected, next_token};
+		}
+	}
+	// ;
+	next_token = GetNextToken();
+	if (strcmp(next_token.lx, ";") != 0)
+	{
+		return (ParserInfo){semicolonExpected, next_token};
+	}
+	return InfoNoError;
 }
 // letStatement → let identifier [ [ expression ] ] = expression ;
 ParserInfo letStatement()
@@ -74,6 +157,22 @@ ParserInfo letStatement()
 			return (ParserInfo){syntaxError, next_token};
 		}
 	}
+	// =
+	next_token = GetNextToken();
+	if (strcmp(next_token.lx, "=") != 0)
+	{
+		return (ParserInfo){equalExpected, next_token};
+	}
+	// expression
+	ParserInfo info = expression();
+	if (info.er != none)
+		return info;
+	// ;
+	next_token = GetNextToken();
+	if (strcmp(next_token.lx, ";") != 0)
+	{
+		return (ParserInfo){semicolonExpected, next_token};
+	}
 	return InfoNoError;
 }
 // ifStatement→if ( expression ) { { statement } } [ else { { statement } } ]
@@ -90,11 +189,11 @@ ParserInfo ifStatement()
 	if (info.er != none)
 		return info;
 	// { { statement } }
-
-	//
-	// THIS NEEDS TO BE FILLED IN
-	//
-
+	ParserInfo info = wrappedZeroOrMoreStatements();
+	if (info.er != none)
+	{
+		return info;
+	}
 	// [ else { { statement } } ]
 	next_token = PeekNextToken();
 	if (strcmp(next_token.lx, "else") != 0)
@@ -102,11 +201,11 @@ ParserInfo ifStatement()
 		return (ParserInfo){syntaxError, next_token};
 	}
 	// { { statement } }
-
-	//
-	// THIS NEEDS TO BE FILLED IN
-	//
-
+	ParserInfo info = wrappedZeroOrMoreStatements();
+	if (info.er != none)
+	{
+		return info;
+	}
 	return InfoNoError;
 }
 // whileStatement → while ( expression ) { { statement } }
@@ -129,11 +228,11 @@ ParserInfo whileStatement()
 		return (ParserInfo){openBraceExpected, next_token};
 	}
 	// {statement}
-
-	//
-	// THIS NEEDS TO BE FILLED IN
-	//
-
+	ParserInfo info = wrappedZeroOrMoreStatements();
+	if (info.er != none)
+	{
+		return info;
+	}
 	// {
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, "}") != 0)
@@ -238,7 +337,7 @@ ParserInfo expressionList()
 	return InfoNoError;
 };
 // returnStatement → return [ expression ];
-ParserInfo returnStatment()
+ParserInfo returnStatement()
 {
 	Token next_token = GetNextToken();
 	// return
