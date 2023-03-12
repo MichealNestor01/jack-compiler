@@ -26,11 +26,52 @@ ParserInfo classVarDeclar();
 // type→int|char|boolean|identifier
 ParserInfo type();
 // subroutineDeclar→( constructor|funtoin|method)( type | void ) identifier( paramList ) subroutineBody
-ParserInfo subroutineDeclar();
+ParserInfo subroutineDeclar()
+{
+	// (constructor|function|method)
+	// ( type | void )
+	// identifier
+	// (
+	// paramList
+	// )
+	// subroutineBody
+}
 // paramList→type identifier {, type identifier }|ϵ
-ParserInfo paramList();
+ParserInfo paramList()
+{
+	// type
+
+	// todo: when type is implemented
+
+	// indentifier
+	Token next_token = GetNextToken();
+	if (next_token.tp != ID)
+	{
+		return (ParserInfo){idExpected, next_token};
+	}
+	// {, type identifier }
+	while (strcmp(PeekNextToken().lx, ",") == 0)
+	{
+		// eat the ,
+		GetNextToken();
+		// type
+
+		// todo: when type is implemented
+
+		// identifier
+		Token next_token = GetNextToken();
+		if (next_token.tp != ID)
+		{
+			return (ParserInfo){idExpected, next_token};
+		}
+	}
+	return InfoNoError;
+}
 // subroutineBody→ { { statement } }
-ParserInfo subroutineBody();
+ParserInfo subroutineBody()
+{
+	return wrappedZeroOrMoreStatements();
+}
 // Statement Grammar:
 // wrappedZeroOrMoreStatements → { { statement } }
 ParserInfo wrappedZeroOrMoreStatements()
@@ -535,6 +576,9 @@ ParserInfo operand()
 			}
 			// [ [expression] | ( expressionList ) ]
 			// [expression]
+			// [ expression ]
+
+			// Gonna need to have a think about how the or works here
 
 			// To do this you will need to implement expression
 		}
