@@ -43,7 +43,26 @@ ParserInfo ifStatement();
 // whileStatement → while ( expression ) { { statement } }
 ParserInfo whileStatement();
 // doStatement → do subroutineCall ;
-ParserInfo doStatement();
+ParserInfo doStatement()
+{
+	// do
+	Token next_token = GetNextToken();
+	if (strcmp(next_token.lx, "do") != 0)
+	{
+		return (ParserInfo){syntaxError, next_token};
+	}
+	// subroutineCall
+	ParserInfo info = expressionList();
+	if (info.er != none)
+		return info;
+	// ;
+	Token next_token = GetNextToken();
+	if (strcmp(next_token.lx, ";") != 0)
+	{
+		return (ParserInfo){semicolonExpected, next_token};
+	}
+	return InfoNoError;
+};
 // subroutineCall → identifier [.identifier] ( expressionList )
 ParserInfo subroutineCall()
 {
@@ -77,6 +96,7 @@ ParserInfo subroutineCall()
 	{
 		return (ParserInfo){openParenExpected, next_token};
 	}
+	return InfoNoError;
 }
 // expressoinList → expression {, expression }|ϵ
 ParserInfo expressionList()
@@ -94,6 +114,7 @@ ParserInfo expressionList()
 		if (info.er != none)
 			return info;
 	}
+	return InfoNoError;
 };
 // returnStatement → return [ expression ];
 ParserInfo returnStatment()
