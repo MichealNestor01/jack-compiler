@@ -41,7 +41,49 @@ ParserInfo letStatement();
 // ifStatement→if ( expression ) { { statement } } [ else { { statement } } ]
 ParserInfo ifStatement();
 // whileStatement → while ( expression ) { { statement } }
-ParserInfo whileStatement();
+ParserInfo whileStatement()
+{
+	// while
+	Token next_token = GetNextToken();
+	if (strcmp(next_token.lx, "while") != 0)
+	{
+		return (ParserInfo){syntaxError, next_token};
+	}
+	// (
+	next_token = GetNextToken();
+	if (strcmp(next_token.lx, "(") != 0)
+	{
+		return (ParserInfo){openParenExpected, next_token};
+	}
+	// expression
+	ParserInfo info = expression();
+	if (info.er != none)
+		return info;
+	// )
+	next_token = GetNextToken();
+	if (strcmp(next_token.lx, ")") != 0)
+	{
+		return (ParserInfo){closeParenExpected, next_token};
+	}
+	// {
+	next_token = GetNextToken();
+	if (strcmp(next_token.lx, "{") != 0)
+	{
+		return (ParserInfo){openBraceExpected, next_token};
+	}
+	// {statement}
+
+	//
+	// THIS NEEDS TO BE FILLED IN
+	//
+
+	// {
+	next_token = GetNextToken();
+	if (strcmp(next_token.lx, "}") != 0)
+	{
+		return (ParserInfo){closeBraceExpected, next_token};
+	}
+}
 // doStatement → do subroutineCall ;
 ParserInfo doStatement()
 {
@@ -94,7 +136,7 @@ ParserInfo subroutineCall()
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, ")") != 0)
 	{
-		return (ParserInfo){openParenExpected, next_token};
+		return (ParserInfo){closeParenExpected, next_token};
 	}
 	return InfoNoError;
 }
