@@ -29,12 +29,57 @@ ParserInfo type();
 ParserInfo subroutineDeclar()
 {
 	// (constructor|function|method)
+	Token next_token = GetNextToken();
+	if (strcmp(next_token.lx, "constructor") *
+			strcmp(next_token.lx, "function") *
+			strcmp(next_token.lx, "method") !=
+		0)
+	{
+		return (ParserInfo){syntaxError, next_token};
+	}
 	// ( type | void )
+	next_token = PeekNextToken();
+	if (strcmp(next_token.lx, "void") == 0)
+	{
+		// eat void
+		GetNextToken();
+	}
+	else
+	{
+		// type
+		ParserInfo info = type();
+		if (info.er != none)
+		{
+			return info;
+		}
+	}
 	// identifier
+	next_token = GetNextToken();
+	if (next_token.tp != ID)
+	{
+		return (ParserInfo){idExpected, next_token};
+	}
 	// (
+	Token next_token = GetNextToken();
+	if (strcmp(next_token.lx, "(") != 0)
+	{
+		return (ParserInfo){openParenExpected, next_token};
+	}
 	// paramList
+	ParserInfo info = paramList();
+	if (info.er != none)
+		return info;
 	// )
+	next_token = GetNextToken();
+	if (strcmp(next_token.lx, ")") != 0)
+	{
+		return (ParserInfo){closeParenExpected, next_token};
+	}
 	// subroutineBody
+	ParserInfo info = subroutineBody();
+	if (info.er != none)
+		return info;
+	return InfoNoError;
 }
 // paramList→type identifier {, type identifier }|ϵ
 ParserInfo paramList()
