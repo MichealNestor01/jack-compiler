@@ -24,16 +24,25 @@ ParserInfo memberDeclar();
 // classVarDeclar→(static|field) type identifier {, identifier};
 ParserInfo classVarDeclar();
 // type→int|char|boolean|identifier
-ParserInfo type();
+ParserInfo type()
+{
+	Token next_token = GetNextToken();
+	// int|char|boolean
+	if ((strcmp(next_token.lx, "int") *
+		 strcmp(next_token.lx, "char") *
+		 strcmp(next_token.lx, "boolean")) == 0)
+	{
+		return InfoNoError;
+	}
+};
 // subroutineDeclar→( constructor|funtoin|method)( type | void ) identifier( paramList ) subroutineBody
 ParserInfo subroutineDeclar()
 {
 	// (constructor|function|method)
 	Token next_token = GetNextToken();
-	if (strcmp(next_token.lx, "constructor") *
-			strcmp(next_token.lx, "function") *
-			strcmp(next_token.lx, "method") !=
-		0)
+	if ((strcmp(next_token.lx, "constructor") *
+		 strcmp(next_token.lx, "function") *
+		 strcmp(next_token.lx, "method")) != 0)
 	{
 		return (ParserInfo){syntaxError, next_token};
 	}
