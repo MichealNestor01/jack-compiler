@@ -38,6 +38,24 @@ ParserInfo class()
 	{
 		return (ParserInfo){openBraceExpected, next_token};
 	}
+	// {memberdeDeclar}
+	next_token = PeekNextToken();
+	// static|field|constructor|function|method
+	if ((strcmp(next_token.lx, "static") *
+		 strcmp(next_token.lx, "field") *
+		 strcmp(next_token.lx, "constructor") *
+		 strcmp(next_token.lx, "function") *
+		 strcmp(next_token.lx, "method")) == 0)
+	{
+		return memberDeclar();
+	}
+	// }
+	next_token = GetNextToken();
+	if (strcmp(next_token.lx, "{") != 0)
+	{
+		return (ParserInfo){openBraceExpected, next_token};
+	}
+	return InfoNoError;
 }
 // memberDeclar→classVarDeclar | subroutineDeclar
 ParserInfo memberDeclar()
@@ -51,7 +69,7 @@ ParserInfo memberDeclar()
 		return classVarDeclar();
 	}
 	// else try subroutineDeclare
-	// (constructor|function|method)
+	// constructor|function|method
 	if ((strcmp(next_token.lx, "constructor") *
 		 strcmp(next_token.lx, "function") *
 		 strcmp(next_token.lx, "method")) == 0)
