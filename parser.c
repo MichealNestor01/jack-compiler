@@ -27,14 +27,17 @@ ParserInfo classVarDeclar();
 ParserInfo type()
 {
 	Token next_token = GetNextToken();
-	// int|char|boolean
-	if ((strcmp(next_token.lx, "int") *
+	// int|char|boolean|identifier
+	if (next_token.tp == ID ||
+		(strcmp(next_token.lx, "int") *
 		 strcmp(next_token.lx, "char") *
 		 strcmp(next_token.lx, "boolean")) == 0)
 	{
 		return InfoNoError;
 	}
-};
+	// should this be idExpected or Syntax error?
+	return (ParserInfo){idExpected, next_token};
+}
 // subroutineDeclar→( constructor|funtoin|method)( type | void ) identifier( paramList ) subroutineBody
 ParserInfo subroutineDeclar()
 {
@@ -94,9 +97,11 @@ ParserInfo subroutineDeclar()
 ParserInfo paramList()
 {
 	// type
-
-	// todo: when type is implemented
-
+	ParserInfo info = type();
+	if (info.er != none)
+	{
+		return info;
+	}
 	// indentifier
 	Token next_token = GetNextToken();
 	if (next_token.tp != ID)
@@ -109,9 +114,11 @@ ParserInfo paramList()
 		// eat the ,
 		GetNextToken();
 		// type
-
-		// todo: when type is implemented
-
+		ParserInfo info = type();
+		if (info.er != none)
+		{
+			return info;
+		}
 		// identifier
 		Token next_token = GetNextToken();
 		if (next_token.tp != ID)
