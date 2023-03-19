@@ -18,7 +18,27 @@ ParserInfo InfoNoError = {none, NULL};
 // you need to implemenent these grammars:
 // Class Grammar:
 // class→class identifier { { memeberDeclar } }
-ParserInfo class();
+ParserInfo class()
+{
+	// class
+	Token next_token = GetNextToken();
+	if (strcmp(next_token.lx, "class") != 0)
+	{
+		return (ParserInfo){classExpected, next_token};
+	}
+	// identifier
+	next_token = GetNextToken();
+	if (next_token.tp != ID)
+	{
+		return (ParserInfo){syntaxError, next_token};
+	}
+	// {
+	next_token = GetNextToken();
+	if (strcmp(next_token.lx, "{") != 0)
+	{
+		return (ParserInfo){openBraceExpected, next_token};
+	}
+}
 // memberDeclar→classVarDeclar | subroutineDeclar
 ParserInfo memberDeclar()
 {
@@ -43,8 +63,8 @@ ParserInfo memberDeclar()
 // classVarDeclar→(static|field) type identifier {, identifier};
 ParserInfo classVarDeclar()
 {
-	Token next_token = GetNextToken();
 	// static|field
+	Token next_token = GetNextToken();
 	if ((strcmp(next_token.lx, "static") *
 		 strcmp(next_token.lx, "field")) != 0)
 	{
@@ -78,8 +98,8 @@ ParserInfo classVarDeclar()
 // type→int|char|boolean|identifier
 ParserInfo type()
 {
-	Token next_token = GetNextToken();
 	// int|char|boolean|identifier
+	Token next_token = GetNextToken();
 	if (next_token.tp == ID ||
 		(strcmp(next_token.lx, "int") *
 		 strcmp(next_token.lx, "char") *
