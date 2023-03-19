@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "lexer.h"
+// #include "lexer.h"
 #include "parser.h"
 
 // error function
@@ -13,7 +13,34 @@ void error(char *s)
 }
 
 // no error parser info
-ParserInfo InfoNoError = {none, NULL};
+ParserInfo InfoNoError;
+
+// class defnitions
+ParserInfo class();
+ParserInfo memberDeclar();
+ParserInfo classVarDeclar();
+ParserInfo type();
+ParserInfo subroutineDeclar();
+ParserInfo paramList();
+ParserInfo subroutineBody();
+ParserInfo wrappedZeroOrMoreStatements();
+ParserInfo statement();
+ParserInfo varDeclarStatement();
+ParserInfo letStatement();
+ParserInfo ifStatement();
+ParserInfo whileStatement();
+ParserInfo wrappedExpression();
+ParserInfo doStatement();
+ParserInfo subroutineCall();
+ParserInfo expressionList();
+ParserInfo returnStatement();
+ParserInfo expression();
+ParserInfo relationalExpression();
+ParserInfo arithmeticExpression();
+ParserInfo term();
+ParserInfo factor();
+ParserInfo dotIdentifier();
+ParserInfo operand();
 
 // you need to implemenent these grammars:
 // Class Grammar:
@@ -131,6 +158,7 @@ ParserInfo type()
 // subroutineDeclar→( constructor|funtoin|method)( type | void ) identifier( paramList ) subroutineBody
 ParserInfo subroutineDeclar()
 {
+	ParserInfo info;
 	// (constructor|function|method)
 	Token next_token = GetNextToken();
 	if ((strcmp(next_token.lx, "constructor") *
@@ -149,7 +177,7 @@ ParserInfo subroutineDeclar()
 	else
 	{
 		// type
-		ParserInfo info = type();
+		info = type();
 		if (info.er != none)
 		{
 			return info;
@@ -162,13 +190,13 @@ ParserInfo subroutineDeclar()
 		return (ParserInfo){idExpected, next_token};
 	}
 	// (
-	Token next_token = GetNextToken();
+	next_token = GetNextToken();
 	if (strcmp(next_token.lx, "(") != 0)
 	{
 		return (ParserInfo){openParenExpected, next_token};
 	}
 	// paramList
-	ParserInfo info = paramList();
+	info = paramList();
 	if (info.er != none)
 		return info;
 	// )
@@ -178,7 +206,7 @@ ParserInfo subroutineDeclar()
 		return (ParserInfo){closeParenExpected, next_token};
 	}
 	// subroutineBody
-	ParserInfo info = subroutineBody();
+	info = subroutineBody();
 	if (info.er != none)
 		return info;
 	return InfoNoError;
@@ -284,7 +312,7 @@ ParserInfo varDeclarStatement()
 		return (ParserInfo){syntaxError, next_token};
 	}
 	// type
-	Token next_token = GetNextToken();
+	next_token = GetNextToken();
 	if (strcmp(next_token.lx, "type") != 0)
 	{
 		return (ParserInfo){syntaxError, next_token};
@@ -381,7 +409,7 @@ ParserInfo ifStatement()
 	if (info.er != none)
 		return info;
 	// { { statement } }
-	ParserInfo info = wrappedZeroOrMoreStatements();
+	info = wrappedZeroOrMoreStatements();
 	if (info.er != none)
 	{
 		return info;
@@ -393,7 +421,7 @@ ParserInfo ifStatement()
 		return (ParserInfo){syntaxError, next_token};
 	}
 	// { { statement } }
-	ParserInfo info = wrappedZeroOrMoreStatements();
+	info = wrappedZeroOrMoreStatements();
 	if (info.er != none)
 	{
 		return info;
@@ -420,7 +448,7 @@ ParserInfo whileStatement()
 		return (ParserInfo){openBraceExpected, next_token};
 	}
 	// {statement}
-	ParserInfo info = wrappedZeroOrMoreStatements();
+	info = wrappedZeroOrMoreStatements();
 	if (info.er != none)
 	{
 		return info;
@@ -468,7 +496,7 @@ ParserInfo doStatement()
 	if (info.er != none)
 		return info;
 	// ;
-	Token next_token = GetNextToken();
+	next_token = GetNextToken();
 	if (strcmp(next_token.lx, ";") != 0)
 	{
 		return (ParserInfo){semicolonExpected, next_token};
@@ -741,7 +769,11 @@ ParserInfo operand()
 
 int InitParser(char *file_name)
 {
-
+	// set info no error
+	Token t = PeekNextToken();
+	InfoNoError = (ParserInfo){none, t};
+	// initialise the lexer
+	// do some other shites
 	return 1;
 }
 
@@ -763,7 +795,7 @@ int StopParser()
 #ifndef TEST_PARSER
 int main()
 {
-
+	printf("hello world\n");
 	return 1;
 }
 #endif
