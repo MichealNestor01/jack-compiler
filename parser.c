@@ -20,9 +20,61 @@ ParserInfo InfoNoError = {none, NULL};
 // class→class identifier { { memeberDeclar } }
 ParserInfo class();
 // memberDeclar→classVarDeclar | subroutineDeclar
-ParserInfo memberDeclar();
+ParserInfo memberDeclar()
+{
+	Token next_token = PeekNextToken();
+	// try classVarDeclare
+	// static|field
+	if ((strcmp(next_token.lx, "static") *
+		 strcmp(next_token.lx, "field")) == 0)
+	{
+		return classVarDeclar();
+	}
+	// else try subroutineDeclare
+	// (constructor|function|method)
+	if ((strcmp(next_token.lx, "constructor") *
+		 strcmp(next_token.lx, "function") *
+		 strcmp(next_token.lx, "method")) == 0)
+	{
+		return subroutineDeclar();
+	}
+	return (ParserInfo){syntaxError, next_token};
+}
 // classVarDeclar→(static|field) type identifier {, identifier};
-ParserInfo classVarDeclar();
+ParserInfo classVarDeclar()
+{
+	Token next_token = GetNextToken();
+	// static|field
+	if ((strcmp(next_token.lx, "static") *
+		 strcmp(next_token.lx, "field")) != 0)
+	{
+		return (ParserInfo){syntaxError, next_token};
+	}
+	// type
+	ParserInfo info = type();
+	if (info.er != none)
+	{
+		return info;
+	}
+	// identifier
+	next_token = GetNextToken();
+	if (next_token.tp != ID)
+	{
+		return (ParserInfo){syntaxError, next_token};
+	}
+	// {, identifier }
+	while (strcmp(PeekNextToken().lx, ",") == 0)
+	{
+		// eat the ,
+		GetNextToken();
+		// identifier
+		Token next_token = GetNextToken();
+		if (next_token.tp != ID)
+		{
+			return (ParserInfo){idExpected, next_token};
+		}
+	}
+}
 // type→int|char|boolean|identifier
 ParserInfo type()
 {
