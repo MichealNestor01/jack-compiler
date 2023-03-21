@@ -744,16 +744,34 @@ ParserInfo operand()
 		{
 			// [ .identifier ][ [expression] | ( expressionList ) ]
 			Token next_next_token = PeekNextToken();
+			ParserInfo info;
 			// [ .identifier ]
 			if (strcmp(next_next_token.lx, ".") == 0)
 			{
-				ParserInfo info = dotIdentifier();
+				info = dotIdentifier();
 				if (info.er != none)
 					return info;
-				// update next_next_token for the next part
-				next_next_token = PeekNextToken();
 			}
-			// [ [expression] | ( expressionList ) ]
+			// [ [ expression ] | ( expressionList ) ] = [ expressionList ]
+
+			// 0 or 1 of (0 or 1 expressions, or an expression list)
+			// this is surely the same as:
+			// [ expressionList ]
+			next_next_token = PeekNextToken();
+			// expression list checks expression
+			// expression checks relationalExpression
+			// relationalExpression checks arithmeticExpression
+			// arithmeticExpression checks term
+			// term checks factor
+			// factor checks - or ~
+			if ((strcmp(next_next_token.lx, "-") *
+				 strcmp(next_next_token.lx, "~")) == 0)
+			{
+				info = expressionList();
+				if (info.er != none)
+					return info;
+			}
+
 			// [expression]
 			// [ expression ]
 
