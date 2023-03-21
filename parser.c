@@ -769,6 +769,14 @@ ParserInfo operand()
 
 int InitParser(char *file_name)
 {
+	// initialise the lexer
+	int lexerError = InitLexer(file_name);
+	if (lexerError == 0)
+	{
+		printf("Lexer encountered an error\n");
+		return lexerError;
+	}
+
 	// set info no error
 	Token t = PeekNextToken();
 	InfoNoError = (ParserInfo){none, t};
@@ -780,7 +788,6 @@ int InitParser(char *file_name)
 ParserInfo Parse()
 {
 	ParserInfo pi;
-
 	// implement the function
 
 	pi.er = none;
@@ -796,6 +803,8 @@ int StopParser()
 int main()
 {
 	printf("hello world\n");
+	InitParser("./testfiles/main.jack");
+	printf("End\n");
 	return 1;
 }
 #endif
