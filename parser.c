@@ -82,6 +82,7 @@ ParserInfo class()
 	{
 		return (ParserInfo){openBraceExpected, next_token};
 	}
+	printf("Class Parsed Successfully\n");
 	return InfoNoError;
 }
 // memberDeclar→classVarDeclar | subroutineDeclar
@@ -93,6 +94,7 @@ ParserInfo memberDeclar()
 	if ((strcmp(next_token.lx, "static") *
 		 strcmp(next_token.lx, "field")) == 0)
 	{
+		printf("memberDeclar Parsed Successfully 1\n");
 		return classVarDeclar();
 	}
 	// else try subroutineDeclare
@@ -101,6 +103,7 @@ ParserInfo memberDeclar()
 		 strcmp(next_token.lx, "function") *
 		 strcmp(next_token.lx, "method")) == 0)
 	{
+		printf("memberDeclar Parsed Successfully 2\n");
 		return subroutineDeclar();
 	}
 	return (ParserInfo){syntaxError, next_token};
@@ -139,6 +142,8 @@ ParserInfo classVarDeclar()
 			return (ParserInfo){idExpected, next_token};
 		}
 	}
+	printf("classVarDeclar Parsed Successfully");
+	return InfoNoError;
 }
 // type→int|char|boolean|identifier
 ParserInfo type()
@@ -150,8 +155,10 @@ ParserInfo type()
 		 strcmp(next_token.lx, "char") *
 		 strcmp(next_token.lx, "boolean")) == 0)
 	{
+		printf("type Parsed Successfully");
 		return InfoNoError;
 	}
+	printf("type not parsed: (%s)\n", next_token.lx);
 	// should this be idExpected or Syntax error?
 	return (ParserInfo){idExpected, next_token};
 }
@@ -167,6 +174,7 @@ ParserInfo subroutineDeclar()
 	{
 		return (ParserInfo){syntaxError, next_token};
 	}
+	printf("SUBDEC: FOUND KEYWORD: (%s)\n", next_token.lx);
 	// ( type | void )
 	next_token = PeekNextToken();
 	if (strcmp(next_token.lx, "void") == 0)
@@ -183,66 +191,84 @@ ParserInfo subroutineDeclar()
 			return info;
 		}
 	}
+	printf("SUBDEC: FOUND TYPE OR VOID: (%s)\n", next_token.lx);
 	// identifier
 	next_token = GetNextToken();
 	if (next_token.tp != ID)
 	{
 		return (ParserInfo){idExpected, next_token};
 	}
+	printf("SUBDEC: FOUND IDENTIFIER: (%s)\n", next_token.lx);
 	// (
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, "(") != 0)
 	{
 		return (ParserInfo){openParenExpected, next_token};
 	}
-	// paramList
-	info = paramList();
-	if (info.er != none)
-		return info;
+	printf("SUBDEC: FOUND OPEN PAREN: (%s)\n", next_token.lx);
+	// check for closed brackets before checking param list
+	next_token = PeekNextToken();
+	if (strcmp(next_token.lx, ")") != 0)
+	{
+		// paramList
+		info = paramList();
+		if (info.er != none)
+			return info;
+	}
+	printf("SUBDEC: FOUND PARAMLIST\n");
 	// )
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, ")") != 0)
 	{
 		return (ParserInfo){closeParenExpected, next_token};
 	}
+	printf("SUBDEC: FOUND CLOSED PAREN: (%s)\n", next_token.lx);
 	// subroutineBody
 	info = subroutineBody();
 	if (info.er != none)
 		return info;
+	printf("subroutine declare Parsed Successfully");
 	return InfoNoError;
 }
-// paramList→type identifier {, type identifier }|ϵ
+// paramList→(type identifier {, type identifier })|ϵ
 ParserInfo paramList()
 {
+	printf("PARSING PARAM LIST\n");
 	// type
 	ParserInfo info = type();
 	if (info.er != none)
 	{
 		return info;
 	}
+	printf("PARAM LIST: FOUND TYPE\n");
 	// indentifier
 	Token next_token = GetNextToken();
 	if (next_token.tp != ID)
 	{
 		return (ParserInfo){idExpected, next_token};
 	}
+	printf("PARAM LIST: FOUND IDENTIFIER: (%s)\n", next_token.lx);
 	// {, type identifier }
 	while (strcmp(PeekNextToken().lx, ",") == 0)
 	{
+		printf("PARAM LIST: FOUND COMMA: (%s)\n", PeekNextToken().lx);
 		// eat the ,
 		GetNextToken();
+
 		// type
 		ParserInfo info = type();
 		if (info.er != none)
 		{
 			return info;
 		}
+		printf("PARAM LIST: FOUND TYPE\n");
 		// identifier
 		Token next_token = GetNextToken();
 		if (next_token.tp != ID)
 		{
 			return (ParserInfo){idExpected, next_token};
 		}
+		printf("PARAM LIST: FOUND IDENTIFIER: (%s)\n", next_token.lx);
 	}
 	return InfoNoError;
 }
@@ -807,21 +833,31 @@ ParserInfo Parse()
 {
 	ParserInfo pi;
 	// implement the function
-
-	pi.er = none;
+	// start by parsing the class
+	pi = class();
+	switch (pi.er)
+	{
+	case lexerErr:
+		printf("Lexer Error at: ");
+		printToken(pi.tk);
+		break;
+	}
+	// pi.er = none;
 	return pi;
 }
 
 int StopParser()
 {
+	StopLexer();
 	return 1;
 }
 
 #ifndef TEST_PARSER
 int main()
 {
-	printf("hello world\n");
-	InitParser("./testfiles/main.jack");
+	InitParser("./testfiles/Main.jack");
+	ParserInfo info = Parse();
+	printf("(%d,%s)\n", info.er, info.tk.lx);
 	printf("End\n");
 	return 1;
 }
