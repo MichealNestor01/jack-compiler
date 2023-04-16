@@ -474,15 +474,14 @@ ParserInfo ifStatement()
 	}
 	// [ else { { statement } } ]
 	next_token = PeekNextToken();
-	if (strcmp(next_token.lx, "else") != 0)
+	if (strcmp(next_token.lx, "else") == 0)
 	{
-		return (ParserInfo){syntaxError, next_token};
-	}
-	// { { statement } }
-	info = wrappedZeroOrMoreStatements();
-	if (info.er != none)
-	{
-		return info;
+		// { { statement } }
+		info = wrappedZeroOrMoreStatements();
+		if (info.er != none)
+		{
+			return info;
+		}
 	}
 	return InfoNoError;
 }
@@ -501,24 +500,13 @@ ParserInfo whileStatement()
 	ParserInfo info = wrappedExpression();
 	if (info.er != none)
 		return info;
-	// {
-	next_token = GetNextToken();
-	if (strcmp(next_token.lx, "{") != 0)
-	{
-		return (ParserInfo){openBraceExpected, next_token};
-	}
-	// {statement}
+	// { {statement} }
 	info = wrappedZeroOrMoreStatements();
 	if (info.er != none)
 	{
 		return info;
 	}
-	// {
-	next_token = GetNextToken();
-	if (strcmp(next_token.lx, "}") != 0)
-	{
-		return (ParserInfo){closeBraceExpected, next_token};
-	}
+	// successfully parsed
 	return InfoNoError;
 }
 // doStatement → do subroutineCall ;
