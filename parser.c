@@ -983,7 +983,7 @@ int StopParser()
 #ifndef TEST_PARSER
 int main()
 {
-	InitParser("./testfiles/Main.jack");
+	InitParser("./testfiles/closeBracketExpected.jack");
 	ParserInfo info = Parse();
 	printf("(%d,%s) near line %d\n", info.er, info.tk.lx, info.tk.ln);
 	printf("End\n");
