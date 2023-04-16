@@ -306,7 +306,7 @@ ParserInfo wrappedZeroOrMoreStatements()
 		;
 	// }
 	next_token = GetNextToken();
-	if (strcmp(next_token.lx, "{") != 0)
+	if (strcmp(next_token.lx, "}") != 0)
 	{
 		return (ParserInfo){closeBraceExpected, next_token};
 	}
@@ -507,6 +507,7 @@ ParserInfo whileStatement()
 		return info;
 	}
 	// successfully parsed
+	printf("\tParsed while statement\n");
 	return InfoNoError;
 }
 // doStatement → do subroutineCall ;
