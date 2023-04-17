@@ -76,25 +76,31 @@ ParserInfo class()
 		return (ParserInfo){openBraceExpected, next_token};
 	}
 	// {memberdeDeclar}
+	ParserInfo info;
 	next_token = PeekNextToken();
-	// static|field|constructor|function|method
-	if ((strcmp(next_token.lx, "static") *
-		 strcmp(next_token.lx, "field") *
-		 strcmp(next_token.lx, "constructor") *
-		 strcmp(next_token.lx, "function") *
-		 strcmp(next_token.lx, "method")) == 0)
+	while ((strcmp(next_token.lx, "static") *
+			strcmp(next_token.lx, "field") *
+			strcmp(next_token.lx, "constructor") *
+			strcmp(next_token.lx, "function") *
+			strcmp(next_token.lx, "method")) == 0)
 	{
-		return memberDeclar();
+		if (SHOWDEBUG)
+			printf("\tCurrent token: {%s}\n", next_token.lx);
+		info = memberDeclar();
+		if (info.er != none)
+			return info;
+		next_token = PeekNextToken();
+		if (SHOWDEBUG)
+			printf("\tToken for next memberDeclar: {%s}\n", next_token.lx);
 	}
 	// }
 	next_token = GetNextToken();
-	if (strcmp(next_token.lx, "{") != 0)
+	if (strcmp(next_token.lx, "}") != 0)
 	{
-		return (ParserInfo){openBraceExpected, next_token};
+		return (ParserInfo){closeBraceExpected, next_token};
 	}
 	if (SHOWDEBUG)
 		printf("Class Parsed Successfully\n");
-
 	return InfoNoError;
 }
 // memberDeclar→classVarDeclar | subroutineDeclar
@@ -110,7 +116,6 @@ ParserInfo memberDeclar()
 	if ((strcmp(next_token.lx, "static") *
 		 strcmp(next_token.lx, "field")) == 0)
 	{
-		// if (SHOWDEBUG) if (SHOWDEBUG) printf("memberDeclar Parsed Successfully 1\n");
 		return classVarDeclar();
 	}
 	// else try subroutineDeclare
@@ -119,7 +124,6 @@ ParserInfo memberDeclar()
 		 strcmp(next_token.lx, "function") *
 		 strcmp(next_token.lx, "method")) == 0)
 	{
-		// if (SHOWDEBUG) printf("memberDeclar Parsed Successfully 2\n");
 		return subroutineDeclar();
 	}
 	return (ParserInfo){syntaxError, next_token};
@@ -141,15 +145,11 @@ ParserInfo classVarDeclar()
 	// type
 	ParserInfo info = type();
 	if (info.er != none)
-	{
 		return info;
-	}
 	// identifier
 	next_token = GetNextToken();
 	if (next_token.tp != ID)
-	{
 		return (ParserInfo){syntaxError, next_token};
-	}
 	// {, identifier }
 	while (strcmp(PeekNextToken().lx, ",") == 0)
 	{
@@ -158,12 +158,14 @@ ParserInfo classVarDeclar()
 		// identifier
 		Token next_token = GetNextToken();
 		if (next_token.tp != ID)
-		{
 			return (ParserInfo){idExpected, next_token};
-		}
 	}
-	// if (SHOWDEBUG) printf("classVarDeclar Parsed Successfully");
-
+	// ;
+	next_token = GetNextToken();
+	if (strcmp(next_token.lx, ";") != 0)
+		return (ParserInfo){semicolonExpected, next_token};
+	if (SHOWDEBUG)
+		printf("\tclassVarDeclar Parsed Successfully\n");
 	return InfoNoError;
 }
 // type→int|char|boolean|identifier
@@ -219,36 +221,36 @@ ParserInfo subroutineDeclar()
 		// type
 		info = type();
 		if (info.er != none)
-		{
 			return info;
-		}
 	}
 	// if (SHOWDEBUG) printf("\tSUBDEC: FOUND TYPE OR VOID: (%s)\n", next_token.lx);
 	//  identifier
 	next_token = GetNextToken();
+	if (SHOWDEBUG)
+		printf("\tNEED IDENTIFIER {%s} {%d}\n", next_token.lx, next_token.tp == ID);
 	if (next_token.tp != ID)
-	{
 		return (ParserInfo){idExpected, next_token};
-	}
 	// if (SHOWDEBUG) printf("\tSUBDEC: FOUND IDENTIFIER: (%s)\n", next_token.lx);
 	//  (
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, "(") != 0)
-	{
 		return (ParserInfo){openParenExpected, next_token};
-	}
 	// if (SHOWDEBUG) printf("\tSUBDEC: FOUND OPEN PAREN: (%s)\n", next_token.lx);
 	//  check for closed brackets before checking param list
 	next_token = PeekNextToken();
 	if (strcmp(next_token.lx, ")") != 0)
 	{
 		// paramList
+		if (SHOWDEBUG)
+			printf("\tChecking paramlist\n");
 		info = paramList();
 		if (info.er != none)
 			return info;
 	}
 	////if (SHOWDEBUG) printf("\tSUBDEC: FOUND PARAMLIST\n");
 	// )
+	if (SHOWDEBUG)
+		printf("\tChecking close paren\n");
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, ")") != 0)
 	{
@@ -274,43 +276,43 @@ ParserInfo paramList()
 	Token t = PeekNextToken();
 	if (SHOWDEBUG)
 		printf("(%d) PARSING paramList {%s}\n", DEPTH, t.lx);
-	// type
-	ParserInfo info = type();
-	if (info.er != none)
+	Token next_token = PeekNextToken();
+	if (next_token.tp == ID ||
+		(strcmp(next_token.lx, "int") *
+		 strcmp(next_token.lx, "char") *
+		 strcmp(next_token.lx, "boolean")) == 0)
 	{
-		return info;
-	}
-	// if (SHOWDEBUG) printf("PARAM LIST: FOUND TYPE\n");
-	//  indentifier
-	Token next_token = GetNextToken();
-	if (next_token.tp != ID)
-	{
-		return (ParserInfo){idExpected, next_token};
-	}
-	// if (SHOWDEBUG) printf("PARAM LIST: FOUND IDENTIFIER: (%s)\n", next_token.lx);
-	//  {, type identifier }
-	while (strcmp(PeekNextToken().lx, ",") == 0)
-	{
-		// if (SHOWDEBUG) printf("PARAM LIST: FOUND COMMA: (%s)\n", PeekNextToken().lx);
-		//  eat the ,
-		GetNextToken();
-
 		// type
 		ParserInfo info = type();
 		if (info.er != none)
 		{
 			return info;
 		}
-		// if (SHOWDEBUG) printf("PARAM LIST: FOUND TYPE\n");
-		//  identifier
-		Token next_token = GetNextToken();
+		//  indentifier
+		next_token = GetNextToken();
 		if (next_token.tp != ID)
 		{
 			return (ParserInfo){idExpected, next_token};
 		}
-		// if (SHOWDEBUG) printf("PARAM LIST: FOUND IDENTIFIER: (%s)\n", next_token.lx);
+		//  {, type identifier }
+		while (strcmp(PeekNextToken().lx, ",") == 0)
+		{
+			//  eat the ,
+			GetNextToken();
+			// type
+			ParserInfo info = type();
+			if (info.er != none)
+			{
+				return info;
+			}
+			//  identifier
+			Token next_token = GetNextToken();
+			if (next_token.tp != ID)
+			{
+				return (ParserInfo){idExpected, next_token};
+			}
+		}
 	}
-
 	return InfoNoError;
 }
 // subroutineBody→ { { statement } }
@@ -1089,7 +1091,7 @@ int StopParser()
 #ifndef TEST_PARSER
 int main()
 {
-	InitParser("./testfiles/closeBracketExpected.jack");
+	InitParser("./testfiles/closeParenExpected.jack");
 	ParserInfo info = Parse();
 	printf("(%d,%s) near line %d\n", info.er, info.tk.lx, info.tk.ln);
 	printf("End\n");
