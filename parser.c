@@ -13,7 +13,7 @@ void error(char *s)
 }
 
 // show debug statements
-int SHOWDEBUG = 0;
+int SHOWDEBUG = 1;
 int DEPTH = 0;
 
 // no error parser info
@@ -604,11 +604,13 @@ ParserInfo doStatement()
 		return (ParserInfo){syntaxError, next_token};
 	}
 	// subroutineCall
-	ParserInfo info = expressionList();
+	ParserInfo info = subroutineCall();
 	if (info.er != none)
 		return info;
 	// ;
 	next_token = GetNextToken();
+	if (SHOWDEBUG)
+		printf("\tDO STATEMENT - LOOKING FOR ; {%s}", next_token);
 	if (strcmp(next_token.lx, ";") != 0)
 	{
 		return (ParserInfo){semicolonExpected, next_token};
@@ -638,6 +640,7 @@ ParserInfo subroutineCall()
 			return info;
 	}
 	// ( expressionList )
+	printf("\tCalling wrapped expresison list {%s}\n", next_token.lx);
 	return wrappedExpressionList();
 }
 // expressoinList → expression {, expression }|ϵ
@@ -897,10 +900,20 @@ ParserInfo wrappedExpressionList()
 	{
 		return (ParserInfo){openParenExpected, next_token};
 	}
+	// check for ) skip extra recursion
+	next_token = PeekNextToken();
+	if (strcmp(next_token.lx, ")") == 0)
+	{
+		GetNextToken();
+		return InfoNoError;
+	}
 	// expressionList
 	ParserInfo info = expressionList();
 	if (info.er != none)
+	{
+		printf("\tExpressionList returned error\n");
 		return info;
+	}
 	// )
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, ")") != 0)
@@ -923,6 +936,13 @@ ParserInfo wrappedExpression()
 	{
 		return (ParserInfo){openParenExpected, next_token};
 	}
+	// check for ) skip extra recursion
+	next_token = PeekNextToken();
+	if (strcmp(next_token.lx, ")") == 0)
+	{
+		GetNextToken();
+		return InfoNoError;
+	}
 	// expression
 	ParserInfo info = expression();
 	if (info.er != none)
@@ -933,6 +953,7 @@ ParserInfo wrappedExpression()
 	{
 		return (ParserInfo){closeParenExpected, next_token};
 	}
+	return InfoNoError;
 }
 // operand → integerConstant | identifier [.identifier][[ expression ]|( expressionList ) ] | ( expression ) | stringLiteral | true | false | null | this
 ParserInfo operand()
@@ -1091,7 +1112,7 @@ int StopParser()
 #ifndef TEST_PARSER
 int main()
 {
-	InitParser("./testfiles/closeParenExpected.jack");
+	InitParser("./testfiles/Ball.jack");
 	ParserInfo info = Parse();
 	printf("(%d,%s) near line %d\n", info.er, info.tk.lx, info.tk.ln);
 	printf("End\n");
