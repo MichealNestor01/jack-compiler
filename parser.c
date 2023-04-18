@@ -13,7 +13,7 @@ void error(char *s)
 }
 
 // show debug statements
-int SHOWDEBUG = 1;
+int SHOWDEBUG = 0;
 int DEPTH = 0;
 
 // no error parser info
@@ -1097,16 +1097,22 @@ int InitParser(char *file_name)
 	// set info no error
 	Token t = PeekNextToken();
 	InfoNoError = (ParserInfo){none, t};
-	// initialise the lexer
-	// do some other shites
 	return 1;
 }
 
 ParserInfo Parse()
 {
 	ParserInfo pi;
-	// implement the function
-	// start by parsing the class
+	// First check for lexer errror
+	// Check for a at tokenisation stage
+	Token first_token = PeekNextToken();
+	if (first_token.tp == ERR)
+	{
+		pi.er = lexerErr;
+		pi.tk = first_token;
+		return pi;
+	}
+	// now parse the class
 	pi = class();
 	switch (pi.er)
 	{
@@ -1115,7 +1121,7 @@ ParserInfo Parse()
 		printToken(pi.tk);
 		break;
 	}
-	// pi.er = none;
+
 	return pi;
 }
 
@@ -1128,7 +1134,7 @@ int StopParser()
 #ifndef TEST_PARSER
 int main()
 {
-	InitParser("./testfiles/syntaxError1.jack");
+	InitParser("./testfiles/NewLineInStr2.jack");
 	ParserInfo info = Parse();
 	printf("(%d,%s) near line %d\n", info.er, info.tk.lx, info.tk.ln);
 	printf("End\n");
