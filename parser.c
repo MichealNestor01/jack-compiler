@@ -13,7 +13,7 @@ void error(char *s)
 }
 
 // show debug statements
-int SHOWDEBUG = 0;
+int SHOWDEBUG = 1;
 int DEPTH = 0;
 
 // no error parser info
@@ -67,7 +67,7 @@ ParserInfo class()
 	next_token = GetNextToken();
 	if (next_token.tp != ID)
 	{
-		return (ParserInfo){syntaxError, next_token};
+		return (ParserInfo){idExpected, next_token};
 	}
 	// {
 	next_token = GetNextToken();
@@ -1128,7 +1128,7 @@ int StopParser()
 #ifndef TEST_PARSER
 int main()
 {
-	InitParser("./testfiles/Ball.jack");
+	InitParser("./testfiles/idExpected.jack");
 	ParserInfo info = Parse();
 	printf("(%d,%s) near line %d\n", info.er, info.tk.lx, info.tk.ln);
 	printf("End\n");
