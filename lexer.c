@@ -555,6 +555,7 @@ int StopLexer()
   return 0;
 }
 
+/*
 // do not remove the next line
 #ifndef TEST
 int main(int argc, char **argv)
@@ -585,3 +586,4 @@ int main(int argc, char **argv)
 }
 // do not remove the next line
 #endif
+*/
