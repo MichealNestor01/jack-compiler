@@ -13,7 +13,7 @@ void error(char *s)
 }
 
 // show debug statements
-int SHOWDEBUG = 1;
+int SHOWDEBUG = 0;
 int DEPTH = 0;
 
 // no error parser info
@@ -642,7 +642,8 @@ ParserInfo subroutineCall()
 			return info;
 	}
 	// ( expressionList )
-	printf("\tCalling wrapped expresison list {%s}\n", next_token.lx);
+	if (SHOWDEBUG)
+		printf("\tCalling wrapped expresison list {%s}\n", next_token.lx);
 	return wrappedExpressionList();
 }
 // expressoinList → expression {, expression }|ϵ
