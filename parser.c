@@ -551,6 +551,8 @@ ParserInfo ifStatement()
 	next_token = PeekNextToken();
 	if (strcmp(next_token.lx, "else") == 0)
 	{
+		// eat else
+		GetNextToken();
 		// { { statement } }
 		info = wrappedZeroOrMoreStatements();
 		if (info.er != none)
@@ -993,10 +995,23 @@ ParserInfo operand()
 	{
 		if (SHOWDEBUG)
 			printf("\tFound bracket\n");
-		// ( expression )
-		info = wrappedExpression();
+		// check for ) skip extra recursion
+		next_token = PeekNextToken();
+		if (strcmp(next_token.lx, ")") == 0)
+		{
+			GetNextToken();
+			return InfoNoError;
+		}
+		// expression
+		ParserInfo info = expression();
 		if (info.er != none)
 			return info;
+		// )
+		next_token = GetNextToken();
+		if (strcmp(next_token.lx, ")") != 0)
+		{
+			return (ParserInfo){closeParenExpected, next_token};
+		}
 	}
 	// identifier [ .identifier ][ [expression] | ( expressionList ) ]
 	else if (next_token.tp == ID)
