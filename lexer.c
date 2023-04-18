@@ -277,12 +277,7 @@ char *getTokenString(char current, LexErrCodes code)
     if (isSymbol(current))
       break;
     current = fgetc(lexerObj.filePointer);
-    if (current == EOF)
-    {
-      ungetc(current, lexerObj.filePointer);
-      break;
-    }
-    else if (isSymbol(current))
+    if (current == EOF || isSymbol(current) || current == '\n')
     {
       ungetc(current, lexerObj.filePointer);
       break;
@@ -560,7 +555,6 @@ int StopLexer()
   return 0;
 }
 
-/*
 // do not remove the next line
 #ifndef TEST
 int main(int argc, char **argv)
@@ -591,4 +585,3 @@ int main(int argc, char **argv)
 }
 // do not remove the next line
 #endif
-*/
