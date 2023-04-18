@@ -13,7 +13,7 @@ void error(char *s)
 }
 
 // show debug statements
-int SHOWDEBUG = 1;
+int SHOWDEBUG = 0;
 int DEPTH = 0;
 
 // no error parser info
@@ -682,20 +682,20 @@ ParserInfo returnStatement()
 	{
 		return (ParserInfo){syntaxError, next_token};
 	}
-	// [ expression ];
-	next_token = PeekNextToken();
-	// if the next token is a ;, then there was no expression
-	// else check for an expression.
-	if (strcmp(next_token.lx, ";") == 0)
-	{
-		GetNextToken();
-
-		return InfoNoError;
-	}
 	// [ expression ]
-	ParserInfo info = expression();
-	if (info.er != none)
-		return info;
+	next_token = PeekNextToken();
+	if ((strcmp(next_token.lx, "-") *
+		 strcmp(next_token.lx, "~") *
+		 strcmp(next_token.lx, "(")) == 0 ||
+		next_token.tp == INT ||
+		next_token.tp == STRING ||
+		next_token.tp == RESWORD ||
+		next_token.tp == ID)
+	{
+		ParserInfo info = expression();
+		if (info.er != none)
+			return info;
+	}
 	// ;
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, ";") != 0)
@@ -1128,7 +1128,7 @@ int StopParser()
 #ifndef TEST_PARSER
 int main()
 {
-	InitParser("./testfiles/idExpected.jack");
+	InitParser("./testfiles/semicolonExpected.jack");
 	ParserInfo info = Parse();
 	printf("(%d,%s) near line %d\n", info.er, info.tk.lx, info.tk.ln);
 	printf("End\n");
