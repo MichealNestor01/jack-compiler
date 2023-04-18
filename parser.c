@@ -13,7 +13,7 @@ void error(char *s)
 }
 
 // show debug statements
-int SHOWDEBUG = 0;
+int SHOWDEBUG = 1;
 int DEPTH = 0;
 
 // no error parser info
@@ -1075,7 +1075,7 @@ ParserInfo operand()
 		}
 	}
 	else
-		(ParserInfo){syntaxError, next_token};
+		return (ParserInfo){syntaxError, next_token};
 	// successfully parsed, return no error
 	if (SHOWDEBUG)
 		printf("PARSED operand\n");
@@ -1128,7 +1128,7 @@ int StopParser()
 #ifndef TEST_PARSER
 int main()
 {
-	InitParser("./testfiles/semicolonExpected.jack");
+	InitParser("./testfiles/syntaxError1.jack");
 	ParserInfo info = Parse();
 	printf("(%d,%s) near line %d\n", info.er, info.tk.lx, info.tk.ln);
 	printf("End\n");
