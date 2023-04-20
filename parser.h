@@ -1,12 +1,13 @@
+#ifndef PARSER_H
+#define PARSER_H
 
 //#define TEST_PARSER  // uncomment to run selfgrader for the parser
 
 #include "lexer.h"
 
-// syntax errors which my be encountered by the parser
 typedef enum {
 	none,					// no errors
-	lexerErr,				// lexer error (if the lexer returns an error)
+	lexerErr,				// lexer error
 	classExpected,			// keyword class expected
 	idExpected,				// identifier expected
 	openBraceExpected,		// { expected
@@ -20,8 +21,12 @@ typedef enum {
 	closeParenExpected,		// ) expected
 	closeBracketExpected,	// ] expected
 	equalExpected,			// = expected
-	syntaxError				// any other kind of syntax error
+	syntaxError,			// any other kind of syntax error
+	// extend this list to include two types of semantic errors
+	undecIdentifier,		// undeclared identifier (e.g. class, subroutine, or variable)
+	redecIdentifier			// redeclaration of identifier in the same scope
 } SyntaxErrors;
+
 
 // every parsing function should return this struct
 // the struct contains an error type field (er)
@@ -31,8 +36,12 @@ typedef struct
 {
 	SyntaxErrors er;
 	Token tk;
+	// other info for semantic and code generation purposes
+
 } ParserInfo;
 
-int InitParser (char* file_name);  // initialise the parser to parse source code in file_name
+int InitParser (char* file_name); // initialise the parser to parse source code in file_name
 ParserInfo Parse (); // parse the input file (the one passed to InitParser)
 int StopParser (); // stop the parser and do any necessary clean up
+
+#endif
