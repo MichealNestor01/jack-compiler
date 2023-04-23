@@ -1130,7 +1130,7 @@ int StopParser()
 	StopLexer();
 	return 1;
 }
-
+/*
 #ifndef TEST_PARSER
 int main()
 {
@@ -1140,4 +1140,4 @@ int main()
 	printf("End\n");
 	return 1;
 }
-#endif
+#endif*/
