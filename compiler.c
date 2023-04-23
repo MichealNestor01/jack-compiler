@@ -14,10 +14,17 @@ Email:
 Date Work Commenced:
 *************************************************************************/
 
+#include <dirent.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/syscall.h>
 #include "compiler.h"
 
 int InitCompiler()
 {
+	// init the symbol table
+	initSymbolTable();
+	initScopeStack();
 	return 1;
 }
 
@@ -26,6 +33,49 @@ ParserInfo compile(char *dir_name)
 	ParserInfo p;
 
 	// write your code below
+
+	// open the directory given
+	DIR *dirObj = opendir(dir_name);
+	if (dirObj == NULL)
+	{
+		printf("Error: Directory can't be opened\n");
+		p.er = lexerErr;
+		return p;
+	}
+
+	// loop through each file in the directory
+	struct dirent *dir;
+	while ((dir = readdir(dirObj)) != NULL)
+	{
+		// skip . and ..
+		if (strcmp(dir->d_name, ".") == 0 || strcmp(dir->d_name, "..") == 0)
+			continue;
+
+		// print the files in the directory
+		printf("File Found: \"%s\"\n", dir->d_name);
+
+		// concatonate the filepath and the file name
+		char filePath[1024];
+		strcpy(filePath, dir_name);
+		strcat(filePath, dir->d_name);
+
+		// init parser
+		InitParser(filePath);
+		ParserInfo info = Parse();
+		if (info.er != none)
+		{
+			printf("Error %d: token: \"%s\" near line %d\n", info.er, info.tk.lx, info.tk.ln);
+			break;
+		}
+		else
+		{
+			printf("%s Parsed with no errors\n", dir->d_name);
+		}
+
+		// stop the parser
+		StopParser();
+	}
+	closedir(dirObj);
 
 	p.er = none;
 	return p;
@@ -42,7 +92,7 @@ int main()
 {
 	InitCompiler();
 	ParserInfo p = compile("Pong");
-	PrintError(p);
+	// PrintError(p);
 	StopCompiler();
 	return 1;
 }
