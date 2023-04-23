@@ -14,5 +14,48 @@ Student ID:
 Email:
 Date Work Commenced:
 *************************************************************************/
-
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
 #include "symbols.h"
+
+// define the program table
+static ProgramTable programTable = {
+    NULL,
+    0,
+    0,
+};
+
+// scope stack keeps track of what table we need to add stuff to
+static int *scopeStack;
+
+/* initialisation */
+
+void initSymbolTable()
+{
+    programTable.entries = (ProgramTableEntry **)malloc(10 * sizeof(ProgramTableEntry *));
+    programTable.capacity = 10;
+}
+
+void initScopeStack()
+{
+    scopeStack = (int *)malloc(sizeof(int) * 20);
+}
+
+/* creating tables */
+ClassTable *createClassTable()
+{
+    ClassTable *table = (ClassTable *)malloc(sizeof(ClassTable));
+    table->entries = (ClassTableEntry **)malloc(10 * sizeof(ClassTableEntry *));
+    table->capacity = 10;
+    table->entries = 0;
+}
+
+SubroutineTable *createSubroutineTable()
+{
+    SubroutineTable *table = (SubroutineTable *)malloc(sizeof(SubroutineTable));
+    table->entries = (SubroutineTableEntry **)malloc(10 * sizeof(SubroutineTableEntry *));
+    table->capacity = 10;
+    table->entries = 0;
+}
