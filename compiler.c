@@ -51,13 +51,14 @@ ParserInfo compile(char *dir_name)
 		if (strcmp(dir->d_name, ".") == 0 || strcmp(dir->d_name, "..") == 0)
 			continue;
 
-		// print the files in the directory
-		printf("File Found: \"%s\"\n", dir->d_name);
-
 		// concatonate the filepath and the file name
 		char filePath[1024];
 		strcpy(filePath, dir_name);
+		strcat(filePath, "/");
 		strcat(filePath, dir->d_name);
+
+		// print the curent file
+		printf("File Found: \"%s\"\n", dir->d_name);
 
 		// init parser
 		InitParser(filePath);
