@@ -13,7 +13,6 @@ void error(char *s)
 }
 
 // show debug statements
-int SHOWDEBUG = 0;
 int DEPTH = 0;
 
 // no error parser info
@@ -52,11 +51,6 @@ ParserInfo operand();
 // class→class identifier { { memeberDeclar } }
 ParserInfo class()
 {
-	DEPTH++;
-	int a = DEPTH;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING CLASS {%s}\n", DEPTH, t.lx);
 	// class
 	Token next_token = GetNextToken();
 	if (strcmp(next_token.lx, "class") != 0)
@@ -84,14 +78,10 @@ ParserInfo class()
 			strcmp(next_token.lx, "function") *
 			strcmp(next_token.lx, "method")) == 0)
 	{
-		if (SHOWDEBUG)
-			printf("\tCurrent token: {%s}\n", next_token.lx);
 		info = memberDeclar();
 		if (info.er != none)
 			return info;
 		next_token = PeekNextToken();
-		if (SHOWDEBUG)
-			printf("\tToken for next memberDeclar: {%s}\n", next_token.lx);
 	}
 	// }
 	next_token = GetNextToken();
@@ -99,17 +89,11 @@ ParserInfo class()
 	{
 		return (ParserInfo){closeBraceExpected, next_token};
 	}
-	if (SHOWDEBUG)
-		printf("Class Parsed Successfully\n");
 	return InfoNoError;
 }
 // memberDeclar→classVarDeclar | subroutineDeclar
 ParserInfo memberDeclar()
 {
-	DEPTH++;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING memberDeclar {%s}\n", DEPTH, t.lx);
 	Token next_token = PeekNextToken();
 	// try classVarDeclare
 	// static|field
@@ -131,10 +115,6 @@ ParserInfo memberDeclar()
 // classVarDeclar→(static|field) type identifier {, identifier};
 ParserInfo classVarDeclar()
 {
-	DEPTH++;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING classVarDecalr {%s}\n", DEPTH, t.lx);
 	// static|field
 	Token next_token = GetNextToken();
 	if ((strcmp(next_token.lx, "static") *
@@ -164,8 +144,6 @@ ParserInfo classVarDeclar()
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, ";") != 0)
 		return (ParserInfo){semicolonExpected, next_token};
-	if (SHOWDEBUG)
-		printf("\tclassVarDeclar Parsed Successfully\n");
 	return InfoNoError;
 }
 // type→int|char|boolean|identifier
@@ -173,8 +151,6 @@ ParserInfo type()
 {
 	DEPTH++;
 	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING type {%s}\n", DEPTH, t.lx);
 	// int|char|boolean|identifier
 	Token next_token = GetNextToken();
 	if (next_token.tp == ID ||
@@ -182,23 +158,14 @@ ParserInfo type()
 		 strcmp(next_token.lx, "char") *
 		 strcmp(next_token.lx, "boolean")) == 0)
 	{
-		// if (SHOWDEBUG) printf("type Parsed Successfully");
-
 		return InfoNoError;
 	}
-	if (SHOWDEBUG)
-		printf("type not parsed: (%s)\n", next_token.lx);
 	// should this be idExpected or Syntax error?
 	return (ParserInfo){idExpected, next_token};
 }
 // subroutineDeclar→( constructor|funtoin|method)( type | void ) identifier( paramList ) subroutineBody
 ParserInfo subroutineDeclar()
 {
-	DEPTH++;
-	int a = DEPTH;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING subroutineDeclar {%s}\n", DEPTH, t.lx);
 	ParserInfo info;
 	// (constructor|function|method)
 	Token next_token = GetNextToken();
@@ -208,7 +175,6 @@ ParserInfo subroutineDeclar()
 	{
 		return (ParserInfo){syntaxError, next_token};
 	}
-	// if (SHOWDEBUG) printf("\tSUBDEC: FOUND KEYWORD: (%s)\n", next_token.lx);
 	//  ( type | void )
 	next_token = PeekNextToken();
 	if (strcmp(next_token.lx, "void") == 0)
@@ -223,59 +189,40 @@ ParserInfo subroutineDeclar()
 		if (info.er != none)
 			return info;
 	}
-	// if (SHOWDEBUG) printf("\tSUBDEC: FOUND TYPE OR VOID: (%s)\n", next_token.lx);
 	//  identifier
 	next_token = GetNextToken();
-	if (SHOWDEBUG)
-		printf("\tNEED IDENTIFIER {%s} {%d}\n", next_token.lx, next_token.tp == ID);
 	if (next_token.tp != ID)
 		return (ParserInfo){idExpected, next_token};
-	// if (SHOWDEBUG) printf("\tSUBDEC: FOUND IDENTIFIER: (%s)\n", next_token.lx);
 	//  (
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, "(") != 0)
 		return (ParserInfo){openParenExpected, next_token};
-	// if (SHOWDEBUG) printf("\tSUBDEC: FOUND OPEN PAREN: (%s)\n", next_token.lx);
 	//  check for closed brackets before checking param list
 	next_token = PeekNextToken();
 	if (strcmp(next_token.lx, ")") != 0)
 	{
 		// paramList
-		if (SHOWDEBUG)
-			printf("\tChecking paramlist\n");
 		info = paramList();
 		if (info.er != none)
 			return info;
 	}
-	////if (SHOWDEBUG) printf("\tSUBDEC: FOUND PARAMLIST\n");
 	// )
-	if (SHOWDEBUG)
-		printf("\tChecking close paren\n");
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, ")") != 0)
 	{
 		return (ParserInfo){closeParenExpected, next_token};
 	}
-	////if (SHOWDEBUG) printf("\tSUBDEC: FOUND CLOSED PAREN: (%s)\n", next_token.lx);
 	// subroutineBody
 	info = subroutineBody();
 	if (info.er != none)
 	{
-		if (SHOWDEBUG)
-			printf("\t(%d) ERROR CAUGHT IN SUBROUTINE BODY [%s]\n", a, info.tk.lx);
 		return info;
 	}
-	// if (SHOWDEBUG) printf("subroutine declare Parsed Successfully");
-
 	return InfoNoError;
 }
 // paramList→(type identifier {, type identifier })|ϵ
 ParserInfo paramList()
 {
-	DEPTH++;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING paramList {%s}\n", DEPTH, t.lx);
 	Token next_token = PeekNextToken();
 	if (next_token.tp == ID ||
 		(strcmp(next_token.lx, "int") *
@@ -324,10 +271,6 @@ ParserInfo subroutineBody()
 // wrappedZeroOrMoreStatements → { { statement } }
 ParserInfo wrappedZeroOrMoreStatements()
 {
-	DEPTH++;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING wrappedZeroOrMoreStatements {%s}\n", DEPTH, t.lx);
 	// {
 	Token next_token = GetNextToken();
 	if (strcmp(next_token.lx, "{") != 0)
@@ -365,10 +308,6 @@ ParserInfo wrappedZeroOrMoreStatements()
 // statement → varDeclarStatement | letStatemnt | ifStatement | whileStatement | doStatement | returnStatemnt
 ParserInfo statement()
 {
-	DEPTH++;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING statement {%s}\n", DEPTH, t.lx);
 	Token next_token = PeekNextToken();
 	if (strcmp(next_token.lx, "var") == 0)
 	{
@@ -399,10 +338,6 @@ ParserInfo statement()
 // varDeclarStatement→var type identifier {, identifier };
 ParserInfo varDeclarStatement()
 {
-	DEPTH++;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING varDeclarStatement {%s}\n", DEPTH, t.lx);
 	// var
 	Token next_token = GetNextToken();
 	if (strcmp(next_token.lx, "var") != 0)
@@ -445,33 +380,22 @@ ParserInfo varDeclarStatement()
 // letStatement → let identifier [ [ expression ] ] = expression ;
 ParserInfo letStatement()
 {
-	DEPTH++;
-	int a = DEPTH;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING letStatement {%s}\n", DEPTH, t.lx);
 	// let
 	Token next_token = GetNextToken();
 	if (strcmp(next_token.lx, "let") != 0)
 	{
 		return (ParserInfo){syntaxError, next_token};
 	}
-	if (SHOWDEBUG)
-		printf("\tFound let\n");
 	// identifier
 	next_token = GetNextToken();
 	if (next_token.tp != ID)
 	{
 		return (ParserInfo){idExpected, next_token};
 	}
-	if (SHOWDEBUG)
-		printf("\tFound identifier\n");
 	// [ [identifier] ]
 	next_token = PeekNextToken();
 	if (strcmp(next_token.lx, "[") == 0)
 	{
-		if (SHOWDEBUG)
-			printf("\tFound [\n");
 		// eat the "["
 		GetNextToken();
 		// identifier
@@ -480,16 +404,12 @@ ParserInfo letStatement()
 		{
 			return (ParserInfo){idExpected, next_token};
 		}
-		if (SHOWDEBUG)
-			printf("\tFound identifier\n");
 		// "]"
 		next_token = GetNextToken();
 		if (strcmp(next_token.lx, "]") != 0)
 		{
 			return (ParserInfo){syntaxError, next_token};
 		}
-		if (SHOWDEBUG)
-			printf("\tFound ]\n");
 	}
 	// =
 	next_token = GetNextToken();
@@ -497,40 +417,23 @@ ParserInfo letStatement()
 	{
 		return (ParserInfo){equalExpected, next_token};
 	}
-	if (SHOWDEBUG)
-		printf("\tFound =\n");
 	// expression
 	ParserInfo info = expression();
 	if (info.er != none)
 	{
-		if (SHOWDEBUG)
-			printf("\t(%d) error caught in expression [%s]\n", a, info.tk.lx);
 		return info;
 	}
-	if (SHOWDEBUG)
-		printf("\tFound expression\n");
 	// ;
 	next_token = GetNextToken();
-	if (SHOWDEBUG)
-		printf("\tNextToken: {%s} near {%d}\n", next_token.lx, next_token.ln);
 	if (strcmp(next_token.lx, ";") != 0)
 	{
 		return (ParserInfo){semicolonExpected, next_token};
 	}
-	if (SHOWDEBUG)
-		printf("\tFound ;\n");
-	if (SHOWDEBUG)
-		printf("PARSED letStatement\n");
-
 	return InfoNoError;
 }
 // ifStatement→if ( expression ) { { statement } } [ else { { statement } } ]
 ParserInfo ifStatement()
 {
-	DEPTH++;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING ifStatement {%s}\n", DEPTH, t.lx);
 	// if
 	Token next_token = GetNextToken();
 	if (strcmp(next_token.lx, "if") != 0)
@@ -566,10 +469,6 @@ ParserInfo ifStatement()
 // whileStatement → while ( expression ) { { statement } }
 ParserInfo whileStatement()
 {
-	DEPTH++;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING whileStatement {%s}\n", DEPTH, t.lx);
 	// while
 	Token next_token = GetNextToken();
 	if (strcmp(next_token.lx, "while") != 0)
@@ -587,18 +486,11 @@ ParserInfo whileStatement()
 		return info;
 	}
 	// successfully parsed
-	if (SHOWDEBUG)
-		printf("\tParsed while statement\n");
-
 	return InfoNoError;
 }
 // doStatement → do subroutineCall ;
 ParserInfo doStatement()
 {
-	DEPTH++;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING doStatement {%s}\n", DEPTH, t.lx);
 	// do
 	Token next_token = GetNextToken();
 	if (strcmp(next_token.lx, "do") != 0)
@@ -611,8 +503,6 @@ ParserInfo doStatement()
 		return info;
 	// ;
 	next_token = GetNextToken();
-	if (SHOWDEBUG)
-		printf("\tDO STATEMENT - LOOKING FOR ; {%s}", next_token);
 	if (strcmp(next_token.lx, ";") != 0)
 	{
 		return (ParserInfo){semicolonExpected, next_token};
@@ -623,10 +513,6 @@ ParserInfo doStatement()
 // subroutineCall → identifier [.identifier] ( expressionList )
 ParserInfo subroutineCall()
 {
-	DEPTH++;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING subroutineCall {%s}\n", DEPTH, t.lx);
 	// identifier
 	Token next_token = GetNextToken();
 	if (next_token.tp != ID)
@@ -642,17 +528,11 @@ ParserInfo subroutineCall()
 			return info;
 	}
 	// ( expressionList )
-	if (SHOWDEBUG)
-		printf("\tCalling wrapped expresison list {%s}\n", next_token.lx);
 	return wrappedExpressionList();
 }
 // expressoinList → expression {, expression }|ϵ
 ParserInfo expressionList()
 {
-	DEPTH++;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING expressionList {%s}\n", DEPTH, t.lx);
 	ParserInfo info = expression();
 	if (info.er != none)
 		return info;
@@ -672,10 +552,6 @@ ParserInfo expressionList()
 // returnStatement → return [ expression ];
 ParserInfo returnStatement()
 {
-	DEPTH++;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING returnStatement {%s}\n", DEPTH, t.lx);
 	Token next_token = GetNextToken();
 	// return
 	if (strcmp(next_token.lx, "return") != 0)
@@ -709,17 +585,10 @@ ParserInfo returnStatement()
 // expresion→ relationalExpression {( & | | ) relationalExpression }
 ParserInfo expression()
 {
-	DEPTH++;
-	int a = DEPTH;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING expression {%s}\n", DEPTH, t.lx);
 	// relationalExpression
 	ParserInfo info = relationalExpression();
 	if (info.er != none)
 	{
-		if (SHOWDEBUG)
-			printf("\t(%d) Bad REXPRESS found in EXPRESS [%s]\n", a, info.tk.lx);
 		return info;
 	}
 	// {( & | | ) relationalExpression }
@@ -735,8 +604,6 @@ ParserInfo expression()
 			return info;
 		next_token = PeekNextToken();
 	}
-	if (SHOWDEBUG)
-		printf("PARSED expression\n");
 	// no error encountered
 
 	return InfoNoError;
@@ -744,18 +611,10 @@ ParserInfo expression()
 // relationalExpression→ arithmeticExpression {( = | > | < ) arithmeticExpression }
 ParserInfo relationalExpression()
 {
-	DEPTH++;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING relationalExpression {%s}\n", DEPTH, t.lx);
 	// arithmeticExpression
 	ParserInfo info = arithmeticExpression();
 	if (info.er != none)
-	{
-		if (SHOWDEBUG)
-			printf("\t(%d) BAD AExpress found in REXPRESS\n", DEPTH);
 		return info;
-	}
 	// {( = | > | < ) arithmeticExpression }
 	Token next_token = PeekNextToken();
 	while ((strcmp(next_token.lx, "=") *
@@ -767,27 +626,15 @@ ParserInfo relationalExpression()
 		// arithmeticExpression
 		info = arithmeticExpression();
 		if (info.er != none)
-		{
-			if (SHOWDEBUG)
-				printf("\t(%d) Bad AExpress found in RExpress 2\n", DEPTH);
 			return info;
-		}
 		next_token = PeekNextToken();
 	}
-	if (SHOWDEBUG)
-		printf("PARSED relationalExpression\n");
 	// no error encountered
-
 	return InfoNoError;
 }
 // arithmeticExpression → term {( + | - ) term }
 ParserInfo arithmeticExpression()
 {
-	DEPTH++;
-	int a = DEPTH;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING arithmeticExpression {%s}\n", DEPTH, t.lx);
 	// term
 	ParserInfo info = term();
 	if (info.er != none)
@@ -802,16 +649,9 @@ ParserInfo arithmeticExpression()
 		// term
 		info = term();
 		if (info.er != none)
-		{
-			if (SHOWDEBUG)
-				printf("\t(%d) Bad term found in AExpress [%s]\n", a, info.tk.lx);
-
 			return info;
-		}
 		next_token = PeekNextToken();
 	}
-	if (SHOWDEBUG)
-		printf("PARSED arithmeticExpression\n");
 	// no error encountered
 
 	return InfoNoError;
@@ -819,19 +659,10 @@ ParserInfo arithmeticExpression()
 // term → factor {( * | / ) factor }
 ParserInfo term()
 {
-	DEPTH++;
-	int a = DEPTH;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING term {%s}\n", DEPTH, t.lx);
 	// factor
 	ParserInfo info = factor();
 	if (info.er != none)
-	{
-		if (SHOWDEBUG)
-			printf("\t(%d) Bad factor found in term [%s]\n", a, info.tk.lx);
 		return info;
-	}
 	// {( * | / ) factor }
 	Token next_token = PeekNextToken();
 	while ((strcmp(next_token.lx, "*") *
@@ -845,8 +676,6 @@ ParserInfo term()
 			return info;
 		next_token = PeekNextToken();
 	}
-	if (SHOWDEBUG)
-		printf("PARSED term\n");
 	// if we have reached here there is a term parsed and no error
 
 	return InfoNoError;
@@ -854,10 +683,6 @@ ParserInfo term()
 // factor →( - | ~ |ϵ) operand
 ParserInfo factor()
 {
-	DEPTH++;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING factor {%s}\n", DEPTH, t.lx);
 	Token next_token = PeekNextToken();
 	// - or ~
 	if ((strcmp(next_token.lx, "-") *
@@ -874,29 +699,20 @@ ParserInfo factor()
 // dotIdentifier → .identifier
 ParserInfo dotIdentifier()
 {
-	DEPTH++;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING dotIdentifier {%s}\n", DEPTH, t.lx);
 	Token next_token = GetNextToken();
 	// .
 	if (strcmp(next_token.lx, ".") != 0)
 		return (ParserInfo){syntaxError, next_token};
-	if (SHOWDEBUG)
-		printf("\tParsed Dot\n");
 	// identifier
 	next_token = GetNextToken();
 	if (next_token.tp != ID)
 		return (ParserInfo){idExpected, next_token};
-	if (SHOWDEBUG)
-		printf("\tParsed Identifier\n");
 
 	return InfoNoError;
 }
 // wrappedExpressionList → (expressionList)
 ParserInfo wrappedExpressionList()
 {
-	DEPTH++;
 	// (
 	Token next_token = GetNextToken();
 	if (strcmp(next_token.lx, "(") != 0)
@@ -913,10 +729,7 @@ ParserInfo wrappedExpressionList()
 	// expressionList
 	ParserInfo info = expressionList();
 	if (info.er != none)
-	{
-		printf("\tExpressionList returned error\n");
 		return info;
-	}
 	// )
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, ")") != 0)
@@ -929,10 +742,6 @@ ParserInfo wrappedExpressionList()
 // wrappedExpression → ( expression )
 ParserInfo wrappedExpression()
 {
-	DEPTH++;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING wrappedExpression {%s}\n", DEPTH, t.lx);
 	// (
 	Token next_token = GetNextToken();
 	if (strcmp(next_token.lx, "(") != 0)
@@ -961,10 +770,6 @@ ParserInfo wrappedExpression()
 // operand → integerConstant | identifier [.identifier][[ expression ]|( expressionList ) ] | ( expression ) | stringLiteral | true | false | null | this
 ParserInfo operand()
 {
-	DEPTH++;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING operand {%s}\n", DEPTH, t.lx);
 	ParserInfo info;
 	Token next_token = GetNextToken();
 	// integerConstant
@@ -994,8 +799,6 @@ ParserInfo operand()
 	// ( expression )
 	else if (strcmp(next_token.lx, "(") == 0)
 	{
-		if (SHOWDEBUG)
-			printf("\tFound bracket\n");
 		// check for ) skip extra recursion
 		next_token = PeekNextToken();
 		if (strcmp(next_token.lx, ")") == 0)
@@ -1017,31 +820,18 @@ ParserInfo operand()
 	// identifier [ .identifier ][ [expression] | ( expressionList ) ]
 	else if (next_token.tp == ID)
 	{
-		if (SHOWDEBUG)
-			printf("\tFound identifier\n");
 		next_token = PeekNextToken();
-		if (SHOWDEBUG)
-			printf("\tcurrent token: {%s}\n", next_token.lx);
 		// [ .identifier ]
 		if (strcmp(next_token.lx, ".") == 0)
 		{
 			info = dotIdentifier();
 			if (info.er != none)
 				return info;
-			if (SHOWDEBUG)
-				printf("\tFound [.identifier]\n");
-		}
-		else
-		{
-			if (SHOWDEBUG)
-				printf("\tNo [.identifier]\n");
 		}
 
 		// [ [ expression ] | ( expressionList ) ] = [ expressionList ]
 		// means 0 or 1 of [expression] or (expressionList)
 		next_token = PeekNextToken();
-		if (SHOWDEBUG)
-			printf("\tcurrent token: {%s}\n", next_token.lx);
 		if (strcmp(next_token.lx, "(") == 0)
 		{
 			info = wrappedExpressionList();
@@ -1050,8 +840,6 @@ ParserInfo operand()
 		}
 		else if (strcmp(next_token.lx, "[") == 0)
 		{
-			if (SHOWDEBUG)
-				printf("\t(%d) Found [, looking for expression\n", DEPTH);
 			int a = DEPTH;
 			// [expression]
 			// eat the [
@@ -1060,16 +848,10 @@ ParserInfo operand()
 			ParserInfo info = expression();
 			if (info.er != none)
 				return info;
-			if (SHOWDEBUG)
-				printf("\t(%d) Looking for close bracket\n", a);
 			// ]
 			next_token = GetNextToken();
-			if (SHOWDEBUG)
-				printf("\t(%d) current token: {%s}\n", a, next_token.lx);
 			if (strcmp(next_token.lx, "]") != 0)
 			{
-				if (SHOWDEBUG)
-					printf("\t(%d) Not found\n", a);
 				return (ParserInfo){closeBracketExpected, next_token};
 			}
 		}
@@ -1077,8 +859,6 @@ ParserInfo operand()
 	else
 		return (ParserInfo){syntaxError, next_token};
 	// successfully parsed, return no error
-	if (SHOWDEBUG)
-		printf("PARSED operand\n");
 
 	return InfoNoError;
 }
