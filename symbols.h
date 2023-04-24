@@ -21,7 +21,7 @@ struct ScopeStack
     int *bottom;
     int capacity;
     int depth;
-}
+};
 
 // struct for the program symbol table
 struct ProgramTable

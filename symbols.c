@@ -54,7 +54,7 @@ void popScope()
     }
 }
 
-void pushScope(int *table)
+void pushScope(int table)
 {
     if (scope.depth == scope.capacity)
     {
@@ -64,7 +64,7 @@ void pushScope(int *table)
     }
     // asign the top of the stack to the given table
     scope.depth++;
-    *(scope.bottom + scope.depth) = table;
+    scope.bottom[scope.depth] = table;
 }
 
 /* creating tables */
