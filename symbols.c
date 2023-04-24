@@ -20,6 +20,9 @@ Date Work Commenced:
 #include <ctype.h>
 #include "symbols.h"
 
+// scope stack keeps track of what table we need to add stuff to
+static ScopeStack scope;
+
 // define the program table
 static ProgramTable programTable = {
     NULL,
@@ -27,29 +30,52 @@ static ProgramTable programTable = {
     0,
 };
 
-// scope stack keeps track of what table we need to add stuff to
-static int *scopeStack;
-
 /* initialisation */
-
 void initSymbolTable()
 {
     programTable.entries = (ProgramTableEntry **)malloc(10 * sizeof(ProgramTableEntry *));
     programTable.capacity = 10;
+    programTable.count = 0;
 }
 
 void initScopeStack()
 {
-    scopeStack = (int *)malloc(sizeof(int) * 20);
+    scope.bottom = (int *)malloc(sizeof(int) * 30);
+    scope.capacity = 29;
+    scope.depth = -1;
+}
+
+/* scope manipulation functions */
+void popScope()
+{
+    if (scope.depth != 0)
+    {
+        scope.depth--;
+    }
+}
+
+void pushScope(int *table)
+{
+    if (scope.depth == scope.capacity)
+    {
+        // alocate another 30 spaces
+        scope.capacity += 30;
+        scope.bottom = (int *)realloc(scope.bottom, sizeof(int) * scope.capacity);
+    }
+    // asign the top of the stack to the given table
+    scope.depth++;
+    *(scope.bottom + scope.depth) = table;
 }
 
 /* creating tables */
-ClassTable *createClassTable()
+ClassTable *
+createClassTable()
 {
     ClassTable *table = (ClassTable *)malloc(sizeof(ClassTable));
     table->entries = (ClassTableEntry **)malloc(10 * sizeof(ClassTableEntry *));
     table->capacity = 10;
     table->entries = 0;
+    return table;
 }
 
 SubroutineTable *createSubroutineTable()
@@ -58,4 +84,5 @@ SubroutineTable *createSubroutineTable()
     table->entries = (SubroutineTableEntry **)malloc(10 * sizeof(SubroutineTableEntry *));
     table->capacity = 10;
     table->entries = 0;
+    return table;
 }

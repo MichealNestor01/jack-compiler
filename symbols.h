@@ -13,6 +13,15 @@ typedef struct SubroutineTable SubroutineTable;
 typedef struct ProgramTableEntry ProgramTableEntry;
 typedef struct ClassTableEntry ClassTableEntry;
 typedef struct SubroutineTableEntry SubroutineTableEntry;
+typedef struct ScopeStack ScopeStack;
+
+// struct for the scope stack
+struct ScopeStack
+{
+    int *bottom;
+    int capacity;
+    int depth;
+}
 
 // struct for the program symbol table
 struct ProgramTable
