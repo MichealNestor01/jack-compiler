@@ -12,9 +12,6 @@ void error(char *s)
 	exit(1);
 }
 
-// show debug statements
-int DEPTH = 0;
-
 // no error parser info
 ParserInfo InfoNoError;
 
@@ -149,8 +146,6 @@ ParserInfo classVarDeclar()
 // type→int|char|boolean|identifier
 ParserInfo type()
 {
-	DEPTH++;
-	Token t = PeekNextToken();
 	// int|char|boolean|identifier
 	Token next_token = GetNextToken();
 	if (next_token.tp == ID ||
@@ -840,7 +835,6 @@ ParserInfo operand()
 		}
 		else if (strcmp(next_token.lx, "[") == 0)
 		{
-			int a = DEPTH;
 			// [expression]
 			// eat the [
 			GetNextToken();
