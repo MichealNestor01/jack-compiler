@@ -93,6 +93,7 @@ unsigned long getScopeTop();
 /*Constructors*/
 ProgramTableEntry *createProgramTableEntry(char *name, int index);
 ClassTableEntry *createClassTableEntry(char *name, char *type, char *kind, int index);
+ClassTableEntry *createClassTableEntryWithTable(char *name, char *type, char *kind, int index);
 ClassTable *createClassTable();
 SubroutineTable *createSubroutineTable();
 /*Getters*/

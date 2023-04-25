@@ -122,6 +122,7 @@ ParserInfo memberDeclar()
 // classVarDeclar→(static|field) type identifier {, identifier};
 ParserInfo classVarDeclar()
 {
+	char *kindString = PeekNextToken().lx;
 	// static|field
 	Token next_token = GetNextToken();
 	if ((strcmp(next_token.lx, "static") *
@@ -129,8 +130,6 @@ ParserInfo classVarDeclar()
 	{
 		return (ParserInfo){syntaxError, next_token};
 	}
-	char *kindString = (char *)malloc(sizeof(char) * 128);
-	strcpy(kindString, next_token.lx);
 	char *typeString = PeekNextToken().lx;
 	// type
 	ParserInfo info = type();
@@ -178,7 +177,6 @@ ParserInfo classVarDeclar()
 		ClassTableEntry *entry = createClassTableEntry(next_token.lx, typeString, kindString, index);
 		addToClassTable(classTable, entry);
 	}
-	free(kindString);
 	// ;
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, ";") != 0)
@@ -204,6 +202,7 @@ ParserInfo type()
 ParserInfo subroutineDeclar()
 {
 	ParserInfo info;
+	char *kindString = PeekNextToken().lx;
 	// (constructor|function|method)
 	Token next_token = GetNextToken();
 	if ((strcmp(next_token.lx, "constructor") *
@@ -212,6 +211,7 @@ ParserInfo subroutineDeclar()
 	{
 		return (ParserInfo){syntaxError, next_token};
 	}
+	char *typeString = PeekNextToken().lx;
 	//  ( type | void )
 	next_token = PeekNextToken();
 	if (strcmp(next_token.lx, "void") == 0)
@@ -230,6 +230,21 @@ ParserInfo subroutineDeclar()
 	next_token = GetNextToken();
 	if (next_token.tp != ID)
 		return (ParserInfo){idExpected, next_token};
+	// validate that this subroutine has not already been defined
+	ClassTable *classTable = (ClassTable *)getScopeTop();
+	int index = 0;
+	for (; index < classTable->count; index++)
+	{
+		if (strcmp(classTable->entries[index]->name, next_token.lx) == 0)
+		{
+			// class aready defined
+			return (ParserInfo){redecIdentifier, next_token};
+		}
+	}
+	// create an entry for this var in the class table
+	ClassTableEntry *entry = createClassTableEntryWithTable(next_token.lx, typeString, kindString, index);
+	addToClassTable(classTable, entry);
+	pushScope((unsigned long)entry->table);
 	//  (
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, "(") != 0)
@@ -255,6 +270,7 @@ ParserInfo subroutineDeclar()
 	{
 		return info;
 	}
+	popScope();
 	return InfoNoError;
 }
 // paramList→(type identifier {, type identifier })|ϵ

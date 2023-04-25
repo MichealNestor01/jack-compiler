@@ -76,12 +76,25 @@ ProgramTableEntry *createProgramTableEntry(char *name, int index)
 ClassTableEntry *createClassTableEntry(char *name, char *type, char *kind, int index)
 {
     // printf("CREATING ENTRY\n\tNAME: %s\n\tTYPE: %s\n\tKIND: %s\n\tINDEX: %d\n", name, type, kind, index);
-    //  allocate memory for entries
+    // allocate memory for entries
     ClassTableEntry *entry = (ClassTableEntry *)malloc(sizeof(ClassTableEntry));
     strcpy(entry->name, name);
     strcpy(entry->type, type);
     strcpy(entry->kind, kind);
     entry->index = index;
+    return entry;
+}
+
+ClassTableEntry *createClassTableEntryWithTable(char *name, char *type, char *kind, int index)
+{
+    // printf("CREATING ENTRY\n\tNAME: %s\n\tTYPE: %s\n\tKIND: %s\n\tINDEX: %d\n", name, type, kind, index);
+    // allocate memory for entries
+    ClassTableEntry *entry = (ClassTableEntry *)malloc(sizeof(ClassTableEntry));
+    strcpy(entry->name, name);
+    strcpy(entry->type, type);
+    strcpy(entry->kind, kind);
+    entry->index = index;
+    entry->table = createSubroutineTable();
     return entry;
 }
 
