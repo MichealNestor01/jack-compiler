@@ -57,6 +57,11 @@ void pushScope(unsigned long table)
     scope.bottom[scope.depth] = table;
 }
 
+unsigned long getScopeTop()
+{
+    return scope.bottom[scope.depth];
+}
+
 /* Constructors */
 ProgramTableEntry *createProgramTableEntry(char *name, int index)
 {
