@@ -44,7 +44,6 @@ ParserInfo dotIdentifier();
 ParserInfo wrappedExpressionList();
 ParserInfo operand();
 
-// you need to implemenent these grammars:
 // Class Grammar:
 // class→class identifier { { memeberDeclar } }
 ParserInfo class()
