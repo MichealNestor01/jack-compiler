@@ -129,6 +129,9 @@ ParserInfo classVarDeclar()
 	{
 		return (ParserInfo){syntaxError, next_token};
 	}
+	char *kindString = (char *)malloc(sizeof(char) * 128);
+	strcpy(kindString, next_token.lx);
+	char *typeString = PeekNextToken().lx;
 	// type
 	ParserInfo info = type();
 	if (info.er != none)
@@ -137,6 +140,20 @@ ParserInfo classVarDeclar()
 	next_token = GetNextToken();
 	if (next_token.tp != ID)
 		return (ParserInfo){syntaxError, next_token};
+	// validate that this var has not already been defined
+	ClassTable *classTable = (ClassTable *)getScopeTop();
+	int index = 0;
+	for (; index < classTable->count; index++)
+	{
+		if (strcmp(classTable->entries[index]->name, next_token.lx) == 0)
+		{
+			// class aready defined
+			return (ParserInfo){redecIdentifier, next_token};
+		}
+	}
+	// create an entry for this var in the class table
+	ClassTableEntry *entry = createClassTableEntry(next_token.lx, typeString, kindString, index);
+	addToClassTable(classTable, entry);
 	// {, identifier }
 	while (strcmp(PeekNextToken().lx, ",") == 0)
 	{
@@ -146,7 +163,22 @@ ParserInfo classVarDeclar()
 		Token next_token = GetNextToken();
 		if (next_token.tp != ID)
 			return (ParserInfo){idExpected, next_token};
+		// validate that this var has not already been defined
+		ClassTable *classTable = (ClassTable *)getScopeTop();
+		int index = 0;
+		for (; index < classTable->count; index++)
+		{
+			if (strcmp(classTable->entries[index]->name, next_token.lx) == 0)
+			{
+				// class aready defined
+				return (ParserInfo){redecIdentifier, next_token};
+			}
+		}
+		// create an entry for this var in the class table
+		ClassTableEntry *entry = createClassTableEntry(next_token.lx, typeString, kindString, index);
+		addToClassTable(classTable, entry);
 	}
+	free(kindString);
 	// ;
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, ";") != 0)
@@ -877,7 +909,6 @@ int InitParser(char *file_name)
 		printf("Lexer encountered an error\n");
 		return lexerError;
 	}
-
 	// set info no error
 	Token t = PeekNextToken();
 	InfoNoError = (ParserInfo){none, t};

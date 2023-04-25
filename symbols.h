@@ -64,9 +64,10 @@ struct ProgramTableEntry
 // struct for entries in the class table
 struct ClassTableEntry
 {
-    char *name;
-    char *type;
-    char *kind; // "static", "field", "argument", or "var"
+    char name[128];
+    char type[128];
+    char kind[128]; // "static", "field", "argument", or "var"
+    int kindIndex;
     int index;
     SubroutineTable *table;
 };
@@ -74,9 +75,10 @@ struct ClassTableEntry
 // struct for entries in the subroutine table
 struct SubroutineTableEntry
 {
-    char *name;
-    char *type;
-    char *kind; // "static", "field", "argument", or "var"
+    char name[128];
+    char type[128];
+    char kind[128]; // "static", "field", "argument", or "var"
+    int kindIndex;
     int index;
 };
 
@@ -87,13 +89,16 @@ void initScopeStack();
 /*Stack Operations*/
 void popScope();
 void pushScope(unsigned long table);
+unsigned long getScopeTop();
 /*Constructors*/
 ProgramTableEntry *createProgramTableEntry(char *name, int index);
+ClassTableEntry *createClassTableEntry(char *name, char *type, char *kind, int index);
 ClassTable *createClassTable();
 SubroutineTable *createSubroutineTable();
 /*Getters*/
 ProgramTable *getProgramTable();
 /*table operators*/
 void addToProgramTable(ProgramTableEntry *entry);
+void addToClassTable(ClassTable *table, ClassTableEntry *entry);
 
 #endif

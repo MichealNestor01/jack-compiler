@@ -73,12 +73,24 @@ ProgramTableEntry *createProgramTableEntry(char *name, int index)
     return entry;
 }
 
+ClassTableEntry *createClassTableEntry(char *name, char *type, char *kind, int index)
+{
+    // printf("CREATING ENTRY\n\tNAME: %s\n\tTYPE: %s\n\tKIND: %s\n\tINDEX: %d\n", name, type, kind, index);
+    //  allocate memory for entries
+    ClassTableEntry *entry = (ClassTableEntry *)malloc(sizeof(ClassTableEntry));
+    strcpy(entry->name, name);
+    strcpy(entry->type, type);
+    strcpy(entry->kind, kind);
+    entry->index = index;
+    return entry;
+}
+
 ClassTable *createClassTable()
 {
     ClassTable *table = (ClassTable *)malloc(sizeof(ClassTable));
     table->entries = (ClassTableEntry **)malloc(10 * sizeof(ClassTableEntry *));
     table->capacity = 10;
-    table->entries = 0;
+    table->count = 0;
     return table;
 }
 
@@ -87,7 +99,7 @@ SubroutineTable *createSubroutineTable()
     SubroutineTable *table = (SubroutineTable *)malloc(sizeof(SubroutineTable));
     table->entries = (SubroutineTableEntry **)malloc(10 * sizeof(SubroutineTableEntry *));
     table->capacity = 10;
-    table->entries = 0;
+    table->count = 0;
     return table;
 }
 
@@ -103,10 +115,31 @@ void addToProgramTable(ProgramTableEntry *entry)
     if (programTable.count == programTable.capacity)
     {
         // alocate another 10 spaces
-        programTable.count += 10;
+        programTable.capacity += 10;
         programTable.entries = (ProgramTableEntry **)realloc(programTable.entries, sizeof(ProgramTableEntry *) * programTable.capacity);
     }
     // asign the top of the stack to the given table
     programTable.entries[programTable.count] = entry;
     programTable.count++;
+}
+
+void addToClassTable(ClassTable *table, ClassTableEntry *entry)
+{
+    // work out entry's kind number
+    int kindIndex = 0;
+    for (int index = 0; index < table->count; index++)
+    {
+        if (strcmp(table->entries[index]->kind, entry->kind) == 0)
+        {
+            kindIndex++;
+        }
+    }
+    entry->kindIndex = kindIndex;
+    if (table->count == table->capacity)
+    {
+        table->capacity += 10;
+        table->entries = (ClassTableEntry **)realloc(table->entries, sizeof(ClassTableEntry *) * table->capacity);
+    }
+    table->entries[table->count] = entry;
+    table->count++;
 }
