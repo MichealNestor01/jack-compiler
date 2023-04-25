@@ -2,8 +2,9 @@
 #include <string.h>
 #include <stdio.h>
 
-// #include "lexer.h"
+#include "lexer.h"
 #include "parser.h"
+#include "symbols.h"
 
 // error function
 void error(char *s)
@@ -60,6 +61,22 @@ ParserInfo class()
 	{
 		return (ParserInfo){idExpected, next_token};
 	}
+	// Check this class has not already been created
+	int index = 0;
+	ProgramTable *programTable = getProgramTable();
+	for (; index < programTable->count; index++)
+	{
+		if (strcmp(programTable->entries[index]->name, next_token.lx) == 0)
+		{
+			// class aready defined
+			return (ParserInfo){redecIdentifier, next_token};
+		}
+	}
+	// create an entry for this class in the program table
+	ProgramTableEntry *entry = createProgramTableEntry(next_token.lx, index);
+	addToProgramTable(entry);
+	// push the current classTable to the top of the scope
+	pushScope((unsigned long)entry->table);
 	// {
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, "{") != 0)
@@ -86,6 +103,8 @@ ParserInfo class()
 	{
 		return (ParserInfo){closeBraceExpected, next_token};
 	}
+	// remove the class from the scope
+	popScope();
 	return InfoNoError;
 }
 // memberDeclar→classVarDeclar | subroutineDeclar

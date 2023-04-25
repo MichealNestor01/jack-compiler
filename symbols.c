@@ -20,27 +20,17 @@ Date Work Commenced:
 #include <ctype.h>
 #include "symbols.h"
 
-// scope stack keeps track of what table we need to add stuff to
-static ScopeStack scope;
-
-// define the program table
-static ProgramTable programTable = {
-    NULL,
-    0,
-    0,
-};
-
 /* initialisation */
 void initSymbolTable()
 {
     programTable.entries = (ProgramTableEntry **)malloc(10 * sizeof(ProgramTableEntry *));
-    programTable.capacity = 10;
+    programTable.capacity = 9;
     programTable.count = 0;
 }
 
 void initScopeStack()
 {
-    scope.bottom = (int *)malloc(sizeof(int) * 30);
+    scope.bottom = (unsigned long *)malloc(sizeof(unsigned long) * 30);
     scope.capacity = 29;
     scope.depth = -1;
 }
@@ -54,22 +44,31 @@ void popScope()
     }
 }
 
-void pushScope(int table)
+void pushScope(unsigned long table)
 {
     if (scope.depth == scope.capacity)
     {
         // alocate another 30 spaces
         scope.capacity += 30;
-        scope.bottom = (int *)realloc(scope.bottom, sizeof(int) * scope.capacity);
+        scope.bottom = (unsigned long *)realloc(scope.bottom, sizeof(unsigned long) * scope.capacity);
     }
     // asign the top of the stack to the given table
     scope.depth++;
     scope.bottom[scope.depth] = table;
 }
 
-/* creating tables */
-ClassTable *
-createClassTable()
+/* Constructors */
+ProgramTableEntry *createProgramTableEntry(char *name, int index)
+{
+    // allocate memory for entries
+    ProgramTableEntry *entry = (ProgramTableEntry *)malloc(sizeof(ProgramTableEntry));
+    strcpy(entry->name, name);
+    entry->index = index;
+    entry->table = createClassTable();
+    return entry;
+}
+
+ClassTable *createClassTable()
 {
     ClassTable *table = (ClassTable *)malloc(sizeof(ClassTable));
     table->entries = (ClassTableEntry **)malloc(10 * sizeof(ClassTableEntry *));
@@ -85,4 +84,24 @@ SubroutineTable *createSubroutineTable()
     table->capacity = 10;
     table->entries = 0;
     return table;
+}
+
+/* Getters */
+ProgramTable *getProgramTable()
+{
+    return &programTable;
+}
+
+/* Add entry to a table */
+void addToProgramTable(ProgramTableEntry *entry)
+{
+    if (programTable.count == programTable.capacity)
+    {
+        // alocate another 10 spaces
+        programTable.count += 10;
+        programTable.entries = (ProgramTableEntry **)realloc(programTable.entries, sizeof(ProgramTableEntry *) * programTable.capacity);
+    }
+    // asign the top of the stack to the given table
+    programTable.entries[programTable.count] = entry;
+    programTable.count++;
 }

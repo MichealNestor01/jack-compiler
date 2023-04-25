@@ -15,10 +15,16 @@ typedef struct ClassTableEntry ClassTableEntry;
 typedef struct SubroutineTableEntry SubroutineTableEntry;
 typedef struct ScopeStack ScopeStack;
 
+// scope stack keeps track of what table we need to add stuff to
+static ScopeStack scope;
+
+// define the program table
+static ProgramTable programTable;
+
 // struct for the scope stack
 struct ScopeStack
 {
-    int *bottom;
+    unsigned long *bottom;
     int capacity;
     int depth;
 };
@@ -50,7 +56,7 @@ struct SubroutineTable
 // struct for entries in the program table
 struct ProgramTableEntry
 {
-    char *name;
+    char name[128];
     int index;
     ClassTable *table;
 };
@@ -74,18 +80,20 @@ struct SubroutineTableEntry
     int index;
 };
 
-/*
-programSymbolTable
-- ClassSymbolTable
--- MethodSymbolTable
-
-
-*/
-
 /*Function Prototypes*/
+/*Initialisation*/
 void initSymbolTable();
 void initScopeStack();
+/*Stack Operations*/
+void popScope();
+void pushScope(unsigned long table);
+/*Constructors*/
+ProgramTableEntry *createProgramTableEntry(char *name, int index);
 ClassTable *createClassTable();
 SubroutineTable *createSubroutineTable();
+/*Getters*/
+ProgramTable *getProgramTable();
+/*table operators*/
+void addToProgramTable(ProgramTableEntry *entry);
 
 #endif

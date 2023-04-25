@@ -84,7 +84,6 @@ ParserInfo compile(char *dir_name)
 
 int StopCompiler()
 {
-
 	return 1;
 }
 
