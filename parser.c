@@ -51,15 +51,11 @@ ParserInfo class()
 	// class
 	Token next_token = GetNextToken();
 	if (strcmp(next_token.lx, "class") != 0)
-	{
 		return (ParserInfo){classExpected, next_token};
-	}
 	// identifier
 	next_token = GetNextToken();
 	if (next_token.tp != ID)
-	{
 		return (ParserInfo){idExpected, next_token};
-	}
 	// Check this class has not already been created
 	int index = 0;
 	ProgramTable *programTable = getProgramTable();
@@ -79,9 +75,7 @@ ParserInfo class()
 	// {
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, "{") != 0)
-	{
 		return (ParserInfo){openBraceExpected, next_token};
-	}
 	// {memberdeDeclar}
 	ParserInfo info;
 	next_token = PeekNextToken();
@@ -99,9 +93,7 @@ ParserInfo class()
 	// }
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, "}") != 0)
-	{
 		return (ParserInfo){closeBraceExpected, next_token};
-	}
 	// remove the class from the scope
 	popScope();
 	return InfoNoError;
