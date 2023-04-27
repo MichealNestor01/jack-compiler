@@ -96,10 +96,11 @@ ClassTableEntry *createClassTableEntry(char *name, char *type, char *kind, int i
 ClassTableEntry *createClassTableEntryWithTable(char *name, char *type, char *kind, int index);
 ClassTable *createClassTable();
 SubroutineTable *createSubroutineTable();
+SubroutineTableEntry *createSubroutineTableEntry(char *name, char *type, char *kind, int index);
 /*Getters*/
 ProgramTable *getProgramTable();
 /*table operators*/
 void addToProgramTable(ProgramTableEntry *entry);
 void addToClassTable(ClassTable *table, ClassTableEntry *entry);
-
+void addToSubroutineTable(SubroutineTable *table, SubroutineTableEntry *entry);
 #endif

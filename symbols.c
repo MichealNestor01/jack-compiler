@@ -98,6 +98,18 @@ ClassTableEntry *createClassTableEntryWithTable(char *name, char *type, char *ki
     return entry;
 }
 
+SubroutineTableEntry *createSubroutineTableEntry(char *name, char *type, char *kind, int index)
+{
+    // printf("CREATING ENTRY\n\tNAME: %s\n\tTYPE: %s\n\tKIND: %s\n\tINDEX: %d\n", name, type, kind, index);
+    // allocate memory for entries
+    SubroutineTableEntry *entry = (SubroutineTableEntry *)malloc(sizeof(SubroutineTableEntry));
+    strcpy(entry->name, name);
+    strcpy(entry->type, type);
+    strcpy(entry->kind, kind);
+    entry->index = index;
+    return entry;
+}
+
 ClassTable *createClassTable()
 {
     ClassTable *table = (ClassTable *)malloc(sizeof(ClassTable));
@@ -152,6 +164,27 @@ void addToClassTable(ClassTable *table, ClassTableEntry *entry)
     {
         table->capacity += 10;
         table->entries = (ClassTableEntry **)realloc(table->entries, sizeof(ClassTableEntry *) * table->capacity);
+    }
+    table->entries[table->count] = entry;
+    table->count++;
+}
+
+void addToSubroutineTable(SubroutineTable *table, SubroutineTableEntry *entry)
+{
+    // work out entry's kind number
+    int kindIndex = 0;
+    for (int index = 0; index < table->count; index++)
+    {
+        if (strcmp(table->entries[index]->kind, entry->kind) == 0)
+        {
+            kindIndex++;
+        }
+    }
+    entry->kindIndex = kindIndex;
+    if (table->count == table->capacity)
+    {
+        table->capacity += 10;
+        table->entries = (SubroutineTableEntry **)realloc(table->entries, sizeof(SubroutineTableEntry *) * table->capacity);
     }
     table->entries[table->count] = entry;
     table->count++;
