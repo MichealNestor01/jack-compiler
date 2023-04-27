@@ -17,7 +17,28 @@ void error(char *s)
 ParserInfo InfoNoError;
 
 // symbol table functions
-ParserInfo createSubroutineEntry(Token *token, char *typeString, char *kindString)
+ParserInfo addTokenToProgramTable(Token *token)
+{
+	// Check this class has not already been created
+	int index = 0;
+	ProgramTable *programTable = getProgramTable();
+	for (; index < programTable->count; index++)
+	{
+		if (strcmp(programTable->entries[index]->name, token->lx) == 0)
+		{
+			// class aready defined
+			return (ParserInfo){redecIdentifier, *token};
+		}
+	}
+	// create an entry for this class in the program table
+	ProgramTableEntry *entry = createProgramTableEntry(token->lx, index);
+	addToProgramTable(entry);
+	// push the current classTable to the top of the scope
+	pushScope((unsigned long)entry->table);
+	return InfoNoError;
+}
+
+ParserInfo addTokenToSubroutineTable(Token *token, char *typeString, char *kindString)
 {
 	// check that this arg has not already been defined
 	SubroutineTable *table = (SubroutineTable *)getScopeTop();
@@ -77,27 +98,14 @@ ParserInfo class()
 	if (next_token.tp != ID)
 		return (ParserInfo){idExpected, next_token};
 	// Check this class has not already been created
-	int index = 0;
-	ProgramTable *programTable = getProgramTable();
-	for (; index < programTable->count; index++)
-	{
-		if (strcmp(programTable->entries[index]->name, next_token.lx) == 0)
-		{
-			// class aready defined
-			return (ParserInfo){redecIdentifier, next_token};
-		}
-	}
-	// create an entry for this class in the program table
-	ProgramTableEntry *entry = createProgramTableEntry(next_token.lx, index);
-	addToProgramTable(entry);
-	// push the current classTable to the top of the scope
-	pushScope((unsigned long)entry->table);
+	ParserInfo info = addTokenToProgramTable(&next_token);
+	if (info.er != none)
+		return info;
 	// {
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, "{") != 0)
 		return (ParserInfo){openBraceExpected, next_token};
 	// {memberdeDeclar}
-	ParserInfo info;
 	next_token = PeekNextToken();
 	while ((strcmp(next_token.lx, "static") *
 			strcmp(next_token.lx, "field") *
@@ -315,7 +323,7 @@ ParserInfo paramList()
 		{
 			return (ParserInfo){idExpected, next_token};
 		}
-		info = createSubroutineEntry(&next_token, typeString, "argument");
+		info = addTokenToSubroutineTable(&next_token, typeString, "argument");
 		if (info.er != none)
 			return info;
 		//  {, type identifier }
@@ -336,7 +344,7 @@ ParserInfo paramList()
 			{
 				return (ParserInfo){idExpected, next_token};
 			}
-			info = createSubroutineEntry(&next_token, typeString, "argument");
+			info = addTokenToSubroutineTable(&next_token, typeString, "argument");
 			if (info.er != none)
 				return info;
 		}
