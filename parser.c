@@ -16,6 +16,26 @@ void error(char *s)
 // no error parser info
 ParserInfo InfoNoError;
 
+// symbol table functions
+ParserInfo createSubroutineEntry(Token *token, char *typeString, char *kindString)
+{
+	// check that this arg has not already been defined
+	SubroutineTable *table = (SubroutineTable *)getScopeTop();
+	int index = 0;
+	for (; index < table->count; index++)
+	{
+		if (strcmp(table->entries[index]->name, token->lx) == 0)
+		{
+			// argument already defined
+			return (ParserInfo){redecIdentifier, *token};
+		}
+	}
+	// create an entry for this argument in the table
+	SubroutineTableEntry *entry = createSubroutineTableEntry(token->lx, typeString, kindString, index);
+	addToSubroutineTable(table, entry);
+	return InfoNoError;
+}
+
 // class defnitions
 ParserInfo class();
 ParserInfo memberDeclar();
@@ -282,7 +302,6 @@ ParserInfo paramList()
 		 strcmp(next_token.lx, "char") *
 		 strcmp(next_token.lx, "boolean")) == 0)
 	{
-		char *kindString = "argument";
 		char *typeString = PeekNextToken().lx;
 		// type
 		ParserInfo info = type();
@@ -296,25 +315,15 @@ ParserInfo paramList()
 		{
 			return (ParserInfo){idExpected, next_token};
 		}
-		// check that this arg has not already been defined
-		SubroutineTable *table = (SubroutineTable *)getScopeTop();
-		int index = 0;
-		for (; index < table->count; index++)
-		{
-			if (strcmp(table->entries[index]->name, next_token.lx) == 0)
-			{
-				// argument already defined
-				return (ParserInfo){redecIdentifier, next_token};
-			}
-		}
-		// create an entry for this argument in the table
-		SubroutineTableEntry *entry = createSubroutineTableEntry(next_token.lx, typeString, kindString, index);
-		addToSubroutineTable(table, entry);
+		info = createSubroutineEntry(&next_token, typeString, "argument");
+		if (info.er != none)
+			return info;
 		//  {, type identifier }
 		while (strcmp(PeekNextToken().lx, ",") == 0)
 		{
 			//  eat the ,
 			GetNextToken();
+			char *typeString = PeekNextToken().lx;
 			// type
 			ParserInfo info = type();
 			if (info.er != none)
@@ -327,6 +336,9 @@ ParserInfo paramList()
 			{
 				return (ParserInfo){idExpected, next_token};
 			}
+			info = createSubroutineEntry(&next_token, typeString, "argument");
+			if (info.er != none)
+				return info;
 		}
 	}
 	return InfoNoError;
