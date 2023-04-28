@@ -437,6 +437,7 @@ ParserInfo varDeclarStatement()
 	{
 		return (ParserInfo){syntaxError, next_token};
 	}
+	char *typeString = PeekNextToken().lx;
 	// type
 	ParserInfo info = type();
 	if (info.er != none)
@@ -449,6 +450,10 @@ ParserInfo varDeclarStatement()
 	{
 		return (ParserInfo){idExpected, next_token};
 	}
+	// check that the identifier has not already been defined
+	info = addTokenToSubroutineTable(&next_token, typeString, "var");
+	if (info.er != none)
+		return info;
 	// {, identifier }
 	while (strcmp(PeekNextToken().lx, ",") == 0)
 	{
