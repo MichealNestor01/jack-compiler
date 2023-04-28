@@ -525,11 +525,11 @@ ParserInfo letStatement()
 	{
 		// eat the "["
 		GetNextToken();
-		// identifier
-		next_token = GetNextToken();
-		if (next_token.tp != ID)
+		// expression
+		info = expression();
+		if (info.er != none)
 		{
-			return (ParserInfo){idExpected, next_token};
+			return info;
 		}
 		// "]"
 		next_token = GetNextToken();
