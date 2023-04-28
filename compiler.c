@@ -31,54 +31,68 @@ int InitCompiler()
 ParserInfo compile(char *dir_name)
 {
 	ParserInfo p;
+	p.er = none;
 
 	// write your code below
 
-	// open the directory given
-	DIR *dirObj = opendir(dir_name);
-	if (dirObj == NULL)
+	// only parse the library files the first time
+	char *libraryFiles[8] = {"Array.jack", "Keyboard.jack", "Math.jack", "Memory.jack", "Output.jack", "Screen.jack", "String.jack", "Sys.jack"};
+	for (int lib = 0; lib < 8; lib++)
 	{
-		printf("Error: Directory can't be opened\n");
-		p.er = lexerErr;
-		return p;
-	}
-
-	// loop through each file in the directory
-	struct dirent *dir;
-	while ((dir = readdir(dirObj)) != NULL)
-	{
-		// skip . and ..
-		if (strcmp(dir->d_name, ".") == 0 || strcmp(dir->d_name, "..") == 0)
-			continue;
-
-		// concatonate the filepath and the file name
-		char filePath[1024];
-		strcpy(filePath, dir_name);
-		strcat(filePath, "/");
-		strcat(filePath, dir->d_name);
-
-		// print the curent file
-		printf("File Found: \"%s\"\n", dir->d_name);
-
-		// init parser
-		InitParser(filePath);
-		ParserInfo info = Parse();
-		if (info.er != none)
-		{
-			printf("Error %d: token: \"%s\" near line %d\n", info.er, info.tk.lx, info.tk.ln);
-			break;
-		}
-		else
-		{
-			printf("%s Parsed with no errors\n", dir->d_name);
-		}
-
-		// stop the parser
+		InitParser(libraryFiles[lib]);
+		Parse();
 		StopParser();
 	}
-	closedir(dirObj);
 
-	p.er = none;
+	// we have to parse twice
+	for (int parseIndex = 0; parseIndex < 2; parseIndex++)
+	{
+		// open the directory given
+		DIR *dirObj = opendir(dir_name);
+		if (dirObj == NULL)
+		{
+			printf("Error: Directory can't be opened\n");
+			p.er = lexerErr;
+			return p;
+		}
+
+		// loop through each file in the directory
+		struct dirent *dir;
+		while ((dir = readdir(dirObj)) != NULL)
+		{
+			// skip . and ..
+			if (strcmp(dir->d_name, ".") == 0 || strcmp(dir->d_name, "..") == 0)
+				continue;
+
+			// concatonate the filepath and the file name
+			char filePath[1024];
+			strcpy(filePath, dir_name);
+			strcat(filePath, "/");
+			strcat(filePath, dir->d_name);
+
+			// print the curent file
+			printf("File Found: \"%s\"\n", dir->d_name);
+
+			// init parser
+			InitParser(filePath);
+			p = Parse();
+			if (p.er != none)
+			{
+				printf("Error %d: token: \"%s\" near line %d\n", p.er, p.tk.lx, p.tk.ln);
+				closedir(dirObj);
+				return p;
+			}
+			else
+			{
+				printf("%s Parsed with no errors\n", dir->d_name);
+			}
+
+			// stop the parser
+			StopParser();
+		}
+		closedir(dirObj);
+	}
+
 	return p;
 }
 
