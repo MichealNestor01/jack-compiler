@@ -90,6 +90,7 @@ void initScopeStack();
 void popScope();
 void pushScope(unsigned long table);
 unsigned long getScopeTop();
+unsigned long getScopeClass();
 /*Constructors*/
 ProgramTableEntry *createProgramTableEntry(char *name, int index);
 ClassTableEntry *createClassTableEntry(char *name, char *type, char *kind, int index);

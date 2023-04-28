@@ -94,6 +94,27 @@ ParserInfo addTokenToSubroutineTable(Token *token, char *typeString, char *kindS
 	addToSubroutineTable(table, entry);
 	return InfoNoError;
 }
+ParserInfo isVarInScope(Token *token)
+{
+	// get the current subroutine table
+	SubroutineTable *subTable = (SubroutineTable *)getScopeTop();
+	// get the current class table
+	ClassTable *classTable = (ClassTable *)getScopeClass();
+	// check that this identifier exists, first check sub table,
+	// then check the class table
+	for (int index = 0; index < subTable->count; index++)
+	{
+		if (strcmp(subTable->entries[index]->name, token->lx) == 0)
+			return InfoNoError;
+	}
+	for (int index = 0; index < classTable->count; index++)
+	{
+		if (strcmp(classTable->entries[index]->name, token->lx) == 0)
+			return InfoNoError;
+	}
+	// identifier has not been found
+	return (ParserInfo){undecIdentifier, *token};
+}
 
 // class defnitions
 ParserInfo class();
@@ -465,6 +486,10 @@ ParserInfo varDeclarStatement()
 		{
 			return (ParserInfo){idExpected, next_token};
 		}
+		// check that the identifier has not already been defined
+		info = addTokenToSubroutineTable(&next_token, typeString, "var");
+		if (info.er != none)
+			return info;
 	}
 	// ;
 	next_token = GetNextToken();
@@ -490,6 +515,10 @@ ParserInfo letStatement()
 	{
 		return (ParserInfo){idExpected, next_token};
 	}
+	// check that this identifier exists
+	ParserInfo info = isVarInScope(&next_token);
+	if (info.er != 0)
+		return info;
 	// [ [identifier] ]
 	next_token = PeekNextToken();
 	if (strcmp(next_token.lx, "[") == 0)
@@ -516,7 +545,7 @@ ParserInfo letStatement()
 		return (ParserInfo){equalExpected, next_token};
 	}
 	// expression
-	ParserInfo info = expression();
+	info = expression();
 	if (info.er != none)
 	{
 		return info;

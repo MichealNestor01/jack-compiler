@@ -62,6 +62,11 @@ unsigned long getScopeTop()
     return scope.bottom[scope.depth];
 }
 
+unsigned long getScopeClass()
+{
+    return scope.bottom[scope.depth - 1];
+}
+
 /* Constructors */
 ProgramTableEntry *createProgramTableEntry(char *name, int index)
 {
