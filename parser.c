@@ -373,7 +373,6 @@ ParserInfo wrappedZeroOrMoreStatements()
 	{
 		return (ParserInfo){openBraceExpected, next_token};
 	}
-
 	// {statement} 0 or more statements
 	ParserInfo info;
 	next_token = PeekNextToken();
@@ -391,14 +390,12 @@ ParserInfo wrappedZeroOrMoreStatements()
 			return info;
 		next_token = PeekNextToken();
 	}
-
 	// }
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, "}") != 0)
 	{
 		return (ParserInfo){closeBraceExpected, next_token};
 	}
-
 	return InfoNoError;
 }
 // statement → varDeclarStatement | letStatemnt | ifStatement | whileStatement | doStatement | returnStatemnt
