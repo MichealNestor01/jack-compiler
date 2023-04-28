@@ -817,7 +817,6 @@ ParserInfo factor()
 	{
 		// eat the token before checking the operand
 		GetNextToken();
-		return operand();
 	}
 	// ϵ (no preceding token)
 	// operand
