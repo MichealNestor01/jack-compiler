@@ -35,6 +35,7 @@ struct ProgramTable
     ProgramTableEntry **entries;
     int capacity;
     int count;
+    int parsedOnce;
 };
 
 // struct for the class symbol table

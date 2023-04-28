@@ -148,6 +148,7 @@ ParserInfo operand();
 // class→class identifier { { memeberDeclar } }
 ParserInfo class()
 {
+	ParserInfo info;
 	// class
 	Token next_token = GetNextToken();
 	if (strcmp(next_token.lx, "class") != 0)
@@ -156,10 +157,13 @@ ParserInfo class()
 	next_token = GetNextToken();
 	if (next_token.tp != ID)
 		return (ParserInfo){idExpected, next_token};
-	// Check this class has not already been created
-	ParserInfo info = addTokenToProgramTable(&next_token);
-	if (info.er != none)
-		return info;
+	// only add identifiers in the first parse
+	if (programTable.parsedOnce == 0)
+	{
+		info = addTokenToProgramTable(&next_token);
+		if (info.er != none)
+			return info;
+	}
 	// {
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, "{") != 0)
@@ -226,10 +230,13 @@ ParserInfo classVarDeclar()
 	next_token = GetNextToken();
 	if (next_token.tp != ID)
 		return (ParserInfo){syntaxError, next_token};
-	// validate that this var has not already been defined
-	info = addVarTokenToClassTable(&next_token, typeString, kindString);
-	if (info.er != none)
-		return info;
+	// only add identifiers in the first parse
+	if (programTable.parsedOnce == 0)
+	{
+		info = addVarTokenToClassTable(&next_token, typeString, kindString);
+		if (info.er != none)
+			return info;
+	}
 	// {, identifier }
 	while (strcmp(PeekNextToken().lx, ",") == 0)
 	{
@@ -239,10 +246,13 @@ ParserInfo classVarDeclar()
 		Token next_token = GetNextToken();
 		if (next_token.tp != ID)
 			return (ParserInfo){idExpected, next_token};
-		// validate that this var has not already been defined
-		info = addVarTokenToClassTable(&next_token, typeString, kindString);
-		if (info.er != none)
-			return info;
+		// only add identifiers in the first parse
+		if (programTable.parsedOnce == 0)
+		{
+			info = addVarTokenToClassTable(&next_token, typeString, kindString);
+			if (info.er != none)
+				return info;
+		}
 	}
 	// ;
 	next_token = GetNextToken();
@@ -297,10 +307,13 @@ ParserInfo subroutineDeclar()
 	next_token = GetNextToken();
 	if (next_token.tp != ID)
 		return (ParserInfo){idExpected, next_token};
-	// validate that this subroutine has not already been defined
-	info = addSubTokenToClassTable(&next_token, typeString, kindString);
-	if (info.er != none)
-		return info;
+	// only add identifiers in the first parse
+	if (programTable.parsedOnce == 0)
+	{
+		info = addSubTokenToClassTable(&next_token, typeString, kindString);
+		if (info.er != none)
+			return info;
+	}
 	//  (
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, "(") != 0)
@@ -351,9 +364,13 @@ ParserInfo paramList()
 		{
 			return (ParserInfo){idExpected, next_token};
 		}
-		info = addTokenToSubroutineTable(&next_token, typeString, "argument");
-		if (info.er != none)
-			return info;
+		// only add identifiers in the first parse
+		if (programTable.parsedOnce == 0)
+		{
+			info = addTokenToSubroutineTable(&next_token, typeString, "argument");
+			if (info.er != none)
+				return info;
+		}
 		//  {, type identifier }
 		while (strcmp(PeekNextToken().lx, ",") == 0)
 		{
@@ -372,9 +389,13 @@ ParserInfo paramList()
 			{
 				return (ParserInfo){idExpected, next_token};
 			}
-			info = addTokenToSubroutineTable(&next_token, typeString, "argument");
-			if (info.er != none)
-				return info;
+			// only add identifiers in the first parse
+			if (programTable.parsedOnce == 0)
+			{
+				info = addTokenToSubroutineTable(&next_token, typeString, "argument");
+				if (info.er != none)
+					return info;
+			}
 		}
 	}
 	return InfoNoError;

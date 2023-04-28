@@ -26,6 +26,7 @@ void initSymbolTable()
     programTable.entries = (ProgramTableEntry **)malloc(10 * sizeof(ProgramTableEntry *));
     programTable.capacity = 9;
     programTable.count = 0;
+    programTable.parsedOnce = 0;
 }
 
 void initScopeStack()

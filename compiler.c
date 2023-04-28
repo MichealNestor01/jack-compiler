@@ -91,6 +91,7 @@ ParserInfo compile(char *dir_name)
 			StopParser();
 		}
 		closedir(dirObj);
+		programTable.parsedOnce = 1;
 	}
 
 	return p;
