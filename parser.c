@@ -833,8 +833,8 @@ ParserInfo dotIdentifier()
 	next_token = GetNextToken();
 	if (next_token.tp != ID)
 		return (ParserInfo){idExpected, next_token};
-
-	return InfoNoError;
+	// check if the identifier exists and return this result
+	return isVarInScope(&next_token);
 }
 // wrappedExpressionList → (expressionList)
 ParserInfo wrappedExpressionList()
@@ -946,6 +946,10 @@ ParserInfo operand()
 	// identifier [ .identifier ][ [expression] | ( expressionList ) ]
 	else if (next_token.tp == ID)
 	{
+		// check if the identifier exists
+		ParserInfo info = isVarInScope(&next_token);
+		if (info.er != none)
+			return info;
 		next_token = PeekNextToken();
 		// [ .identifier ]
 		if (strcmp(next_token.lx, ".") == 0)
@@ -954,7 +958,6 @@ ParserInfo operand()
 			if (info.er != none)
 				return info;
 		}
-
 		// [ [ expression ] | ( expressionList ) ] = [ expressionList ]
 		// means 0 or 1 of [expression] or (expressionList)
 		next_token = PeekNextToken();
@@ -970,7 +973,7 @@ ParserInfo operand()
 			// eat the [
 			GetNextToken();
 			// expression
-			ParserInfo info = expression();
+			info = expression();
 			if (info.er != none)
 				return info;
 			// ]
@@ -984,7 +987,6 @@ ParserInfo operand()
 	else
 		return (ParserInfo){syntaxError, next_token};
 	// successfully parsed, return no error
-
 	return InfoNoError;
 }
 // you can declare prototypes of parser functions below
