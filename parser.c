@@ -38,6 +38,44 @@ ParserInfo addTokenToProgramTable(Token *token)
 	return InfoNoError;
 }
 
+ParserInfo addVarTokenToClassTable(Token *token, char *typeString, char *kindString)
+{
+	// validate that this var has not already been defined
+	ClassTable *classTable = (ClassTable *)getScopeTop();
+	int index = 0;
+	for (; index < classTable->count; index++)
+	{
+		if (strcmp(classTable->entries[index]->name, token->lx) == 0)
+		{
+			// class aready defined
+			return (ParserInfo){redecIdentifier, *token};
+		}
+	}
+	// create an entry for this var in the class table
+	ClassTableEntry *entry = createClassTableEntry(token->lx, typeString, kindString, index);
+	addToClassTable(classTable, entry);
+	return InfoNoError;
+}
+
+ParserInfo addSubTokenToClassTable(Token *token, char *typeString, char *kindString)
+{
+	ClassTable *classTable = (ClassTable *)getScopeTop();
+	int index = 0;
+	for (; index < classTable->count; index++)
+	{
+		if (strcmp(classTable->entries[index]->name, token->lx) == 0)
+		{
+			// class aready defined
+			return (ParserInfo){redecIdentifier, *token};
+		}
+	}
+	// create an entry for this var in the class table
+	ClassTableEntry *entry = createClassTableEntryWithTable(token->lx, typeString, kindString, index);
+	addToClassTable(classTable, entry);
+	pushScope((unsigned long)entry->table);
+	return InfoNoError;
+}
+
 ParserInfo addTokenToSubroutineTable(Token *token, char *typeString, char *kindString)
 {
 	// check that this arg has not already been defined
@@ -168,19 +206,9 @@ ParserInfo classVarDeclar()
 	if (next_token.tp != ID)
 		return (ParserInfo){syntaxError, next_token};
 	// validate that this var has not already been defined
-	ClassTable *classTable = (ClassTable *)getScopeTop();
-	int index = 0;
-	for (; index < classTable->count; index++)
-	{
-		if (strcmp(classTable->entries[index]->name, next_token.lx) == 0)
-		{
-			// class aready defined
-			return (ParserInfo){redecIdentifier, next_token};
-		}
-	}
-	// create an entry for this var in the class table
-	ClassTableEntry *entry = createClassTableEntry(next_token.lx, typeString, kindString, index);
-	addToClassTable(classTable, entry);
+	info = addVarTokenToClassTable(&next_token, typeString, kindString);
+	if (info.er != none)
+		return info;
 	// {, identifier }
 	while (strcmp(PeekNextToken().lx, ",") == 0)
 	{
@@ -191,19 +219,9 @@ ParserInfo classVarDeclar()
 		if (next_token.tp != ID)
 			return (ParserInfo){idExpected, next_token};
 		// validate that this var has not already been defined
-		ClassTable *classTable = (ClassTable *)getScopeTop();
-		int index = 0;
-		for (; index < classTable->count; index++)
-		{
-			if (strcmp(classTable->entries[index]->name, next_token.lx) == 0)
-			{
-				// class aready defined
-				return (ParserInfo){redecIdentifier, next_token};
-			}
-		}
-		// create an entry for this var in the class table
-		ClassTableEntry *entry = createClassTableEntry(next_token.lx, typeString, kindString, index);
-		addToClassTable(classTable, entry);
+		info = addVarTokenToClassTable(&next_token, typeString, kindString);
+		if (info.er != none)
+			return info;
 	}
 	// ;
 	next_token = GetNextToken();
@@ -259,20 +277,9 @@ ParserInfo subroutineDeclar()
 	if (next_token.tp != ID)
 		return (ParserInfo){idExpected, next_token};
 	// validate that this subroutine has not already been defined
-	ClassTable *classTable = (ClassTable *)getScopeTop();
-	int index = 0;
-	for (; index < classTable->count; index++)
-	{
-		if (strcmp(classTable->entries[index]->name, next_token.lx) == 0)
-		{
-			// class aready defined
-			return (ParserInfo){redecIdentifier, next_token};
-		}
-	}
-	// create an entry for this var in the class table
-	ClassTableEntry *entry = createClassTableEntryWithTable(next_token.lx, typeString, kindString, index);
-	addToClassTable(classTable, entry);
-	pushScope((unsigned long)entry->table);
+	info = addSubTokenToClassTable(&next_token, typeString, kindString);
+	if (info.er != none)
+		return info;
 	//  (
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, "(") != 0)
