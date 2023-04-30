@@ -967,6 +967,14 @@ ParserInfo operand()
 	// identifier [ .identifier ][ [expression] | ( expressionList ) ]
 	else if (next_token.tp == ID)
 	{
+
+		// store token 1
+		// check if .identifier
+		// then you should check if token 1 matches
+		// any of the classes in the program table
+		// thennnnn see if the .identifier exists in
+		// this classes symbol table.]
+
 		// check if the identifier exists
 		ParserInfo info = isVarInScope(&next_token);
 		if (info.er != none)
