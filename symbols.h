@@ -87,6 +87,7 @@ struct SubroutineTableEntry
 /*Initialisation*/
 void initSymbolTable();
 void initScopeStack();
+void incrementProgramTableParsed();
 /*Stack Operations*/
 void popScope();
 void pushScope(unsigned long table);

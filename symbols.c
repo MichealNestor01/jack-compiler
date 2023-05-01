@@ -29,6 +29,11 @@ void initSymbolTable()
     programTable.parsedOnce = 0;
 }
 
+void incrementProgramTableParsed()
+{
+    programTable.parsedOnce++;
+}
+
 void initScopeStack()
 {
     scope.bottom = (unsigned long *)malloc(sizeof(unsigned long) * 30);

@@ -44,6 +44,8 @@ ParserInfo compile(char *dir_name)
 		StopParser();
 	}
 
+	printf("PARSED LIBRARIES\n");
+
 	// we have to parse twice
 	for (int parseIndex = 0; parseIndex < 2; parseIndex++)
 	{
@@ -91,7 +93,7 @@ ParserInfo compile(char *dir_name)
 			StopParser();
 		}
 		closedir(dirObj);
-		programTable.parsedOnce = 1;
+		incrementProgramTableParsed();
 	}
 
 	return p;
