@@ -93,7 +93,7 @@ void pushSubToScope(Token *token)
 	ClassTable *classTable = (ClassTable *)getScopeTop();
 	for (int index = 0; index < classTable->count; index++)
 	{
-		if (strcmp(classTable->entries[index]->name, token->lx))
+		if (strcmp(classTable->entries[index]->name, token->lx) == 0)
 		{
 			pushScope((unsigned long)classTable->entries[index]->table);
 			return;
@@ -120,9 +120,9 @@ ParserInfo addTokenToSubroutineTable(Token *token, char *typeString, char *kindS
 }
 ParserInfo isVarInScope(Token *token)
 {
-	// get the current subroutine table
+	//  get the current subroutine table
 	SubroutineTable *subTable = (SubroutineTable *)getScopeTop();
-	// get the current class table
+	//  get the current class table
 	ClassTable *classTable = (ClassTable *)getScopeClass();
 	// check that this identifier exists, first check sub table,
 	// then check the class table
@@ -133,7 +133,6 @@ ParserInfo isVarInScope(Token *token)
 	}
 	for (int index = 0; index < classTable->count; index++)
 	{
-		// printf("Checking %s against: %s of kind %s\n", token->lx, classTable->entries[index]->name, classTable->entries[index]->kind);
 		if (strcmp(classTable->entries[index]->name, token->lx) == 0)
 			return InfoNoError;
 	}
@@ -157,22 +156,22 @@ ParserInfo isSubInScope(Token *token)
 
 ClassTable *getMatchingClass(Token *token)
 {
-	printf("Trying to find table: %s\n", token->lx);
+	// printf("Trying to find table: %s\n", token->lx);
 	ProgramTable *programTable = getProgramTable();
 	for (int index = 0; index < programTable->count; index++)
 	{
-		printf("\tFound class table: %s\n", programTable->entries[index]->name);
+		// printf("\tFound class table: %s\n", programTable->entries[index]->name);
 		if (strcmp(programTable->entries[index]->name, token->lx) == 0)
 			return programTable->entries[index]->table;
 	}
-	printf("Not found table: %s\n", token->lx);
-	// table not found
+	// printf("Not found table: %s\n", token->lx);
+	//  table not found
 	return (ClassTable *)0;
 }
 
 ParserInfo isSubInClass(Token *token, ClassTable *table)
 {
-	printf("Does %s exist in the found table\n", token->lx);
+	// printf("Does %s exist in the found table\n", token->lx);
 	for (int index = 0; index < table->count; index++)
 	{
 		// printf("Checking %s against: %s of kind %s\n", token->lx, table->entries[index]->name, table->entries[index]->kind);
@@ -776,16 +775,29 @@ ParserInfo subroutineCall()
 		next_token = GetNextToken();
 		if (next_token.tp != ID)
 			return (ParserInfo){idExpected, next_token};
+		// first check if the first idenfifier exists in scope
+		//
 		// check if the first identifier is a class that has been parsed
 		// and then check if the current identifier exists in that scope
 		if (parsedOnce)
 		{
-			ClassTable *table = getMatchingClass(&first_token);
-			if (table == 0)
-				return (ParserInfo){undecIdentifier, first_token};
-			ParserInfo info = isSubInClass(&next_token, table);
+			printf("Checking if %s is in scope2\n", first_token.lx);
+			info = isVarInScope(&first_token);
+			// printf("Checked is var in scope\n");
 			if (info.er != none)
-				return info;
+			{
+				ClassTable *table = getMatchingClass(&first_token);
+				if (table == 0)
+					return (ParserInfo){undecIdentifier, first_token};
+				info = isSubInClass(&next_token, table);
+				if (info.er != none)
+					return info;
+			}
+			else
+			{
+				printf("FIRST FOUND IN SCOPE");
+				exit(0);
+			}
 			printf("Function exists!\n");
 		}
 	}
@@ -1132,14 +1144,22 @@ ParserInfo operand()
 			// and then check if the current identifier exists in that scope
 			if (parsedOnce)
 			{
-				printf("Calling Get Class Table!\n");
-				ClassTable *table = getMatchingClass(&first_token);
-				printf("Got Class Table!\n");
-				if (table == 0)
-					return (ParserInfo){undecIdentifier, first_token};
-				ParserInfo info = isSubInClass(&next_token, table);
+				printf("Checking if %s is in scope\n", first_token.lx);
+				info = isVarInScope(&first_token);
 				if (info.er != none)
-					return info;
+				{
+					ClassTable *table = getMatchingClass(&first_token);
+					if (table == 0)
+						return (ParserInfo){undecIdentifier, first_token};
+					info = isSubInClass(&next_token, table);
+					if (info.er != none)
+						return info;
+				}
+				else
+				{
+					printf("FIRST FOUND IN SCOPE");
+					exit(0);
+				}
 			}
 		}
 		// [ [ expression ] | ( expressionList ) ] = [ expressionList ]
