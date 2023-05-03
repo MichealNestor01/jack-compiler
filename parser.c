@@ -181,6 +181,53 @@ ParserInfo isSubInClass(Token *token, ClassTable *table)
 	// identifier has not been found
 	return (ParserInfo){undecIdentifier, *token};
 }
+ParserInfo isCallValid(Token *object, Token *subroutine)
+{
+	// get the type of the object
+	char *type = "";
+	//  get the current subroutine tab/le
+	SubroutineTable *subTable = (SubroutineTable *)getScopeTop();
+	//  get the current class table
+	ClassTable *classTable = (ClassTable *)getScopeClass();
+	for (int index = 0; index < subTable->count; index++)
+	{
+		if (strcmp(subTable->entries[index]->name, object->lx) == 0)
+		{
+			type = subTable->entries[index]->type;
+			break;
+		}
+	}
+	if (strcmp(type, "") == 0)
+	{
+		for (int index = 0; index < classTable->count; index++)
+		{
+			if (strcmp(classTable->entries[index]->name, object->lx) == 0)
+			{
+				type = classTable->entries[index]->type;
+				break;
+			}
+		}
+	}
+	// find the matching class table for the type of object
+	ProgramTable *programTable = getProgramTable();
+	for (int index = 0; index < programTable->count; index++)
+	{
+		if (strcmp(programTable->entries[index]->name, type) == 0)
+		{
+			classTable = programTable->entries[index]->table;
+			break;
+		}
+	}
+	// now look through the class table for the subroutine
+	for (int index = 0; index < classTable->count; index++)
+	{
+		if (strcmp(classTable->entries[index]->name, subroutine->lx) == 0)
+		{
+			return InfoNoError;
+		}
+	}
+	return (ParserInfo){undecIdentifier, *object};
+}
 
 // class defnitions
 ParserInfo class();
@@ -781,7 +828,6 @@ ParserInfo subroutineCall()
 		// and then check if the current identifier exists in that scope
 		if (parsedOnce)
 		{
-			printf("Checking if %s is in scope2\n", first_token.lx);
 			info = isVarInScope(&first_token);
 			// printf("Checked is var in scope\n");
 			if (info.er != none)
@@ -795,10 +841,10 @@ ParserInfo subroutineCall()
 			}
 			else
 			{
-				printf("FIRST FOUND IN SCOPE");
-				exit(0);
+				info = isCallValid(&first_token, &next_token);
+				if (info.er != none)
+					return info;
 			}
-			printf("Function exists!\n");
 		}
 	}
 	else
@@ -1103,20 +1149,6 @@ ParserInfo operand()
 	// identifier [ .identifier ][ [expression] | ( expressionList ) ]
 	else if (next_token.tp == ID)
 	{
-
-		// store token 1
-		// check if .identifier
-		// then you should check if token 1 matches
-		// any of the classes in the program table
-		// thennnnn see if the .identifier exists in
-		// this classes symbol table.]
-
-		// apparently a.b is only ever a function call,
-		// so we are going to check if identifier is a
-		// class, but I am not implementing this unless
-		// it is actually ever tested because I am running
-		// out of time on this one
-
 		int parsedOnce = getProgramTable()->parsedOnce;
 		Token first_token = next_token;
 
@@ -1144,7 +1176,6 @@ ParserInfo operand()
 			// and then check if the current identifier exists in that scope
 			if (parsedOnce)
 			{
-				printf("Checking if %s is in scope\n", first_token.lx);
 				info = isVarInScope(&first_token);
 				if (info.er != none)
 				{
@@ -1157,8 +1188,9 @@ ParserInfo operand()
 				}
 				else
 				{
-					printf("FIRST FOUND IN SCOPE");
-					exit(0);
+					info = isCallValid(&first_token, &next_token);
+					if (info.er != none)
+						return info;
 				}
 			}
 		}
