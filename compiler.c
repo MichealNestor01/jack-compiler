@@ -44,7 +44,7 @@ ParserInfo compile(char *dir_name)
 		StopParser();
 	}
 
-	printf("PARSED LIBRARIES\n");
+	// printf("PARSED LIBRARIES\n");
 
 	// we have to parse twice
 	for (int parseIndex = 0; parseIndex < 2; parseIndex++)
@@ -73,20 +73,20 @@ ParserInfo compile(char *dir_name)
 			strcat(filePath, dir->d_name);
 
 			// print the curent file
-			printf("File Found: \"%s\"\n", dir->d_name);
+			// printf("File Found: \"%s\"\n", dir->d_name);
 
 			// init parser
 			InitParser(filePath);
 			p = Parse();
 			if (p.er != none)
 			{
-				printf("Error %d: token: \"%s\" near line %d\n", p.er, p.tk.lx, p.tk.ln);
+				// printf("Error %d: token: \"%s\" near line %d\n", p.er, p.tk.lx, p.tk.ln);
 				closedir(dirObj);
 				return p;
 			}
 			else
 			{
-				printf("%s Parsed with no errors\n", dir->d_name);
+				// printf("%s Parsed with no errors\n", dir->d_name);
 			}
 
 			// stop the parser
@@ -103,7 +103,7 @@ int StopCompiler()
 {
 	return 1;
 }
-
+/*
 #ifndef TEST_COMPILER
 int main()
 {
@@ -114,3 +114,4 @@ int main()
 	return 1;
 }
 #endif
+*/

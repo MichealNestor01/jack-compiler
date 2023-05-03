@@ -226,7 +226,7 @@ ParserInfo isCallValid(Token *object, Token *subroutine)
 			return InfoNoError;
 		}
 	}
-	return (ParserInfo){undecIdentifier, *object};
+	return (ParserInfo){undecIdentifier, *subroutine};
 }
 
 // class defnitions
@@ -382,8 +382,21 @@ ParserInfo classVarDeclar()
 // type→int|char|boolean|identifier
 ParserInfo type()
 {
+	ProgramTable *programTable = getProgramTable();
 	// int|char|boolean|identifier
 	Token next_token = GetNextToken();
+	if (next_token.tp == ID && programTable->parsedOnce)
+	{
+		// check that the identifier is a valid type
+		for (int index = 0; index < programTable->count; index++)
+		{
+			if (strcmp(programTable->entries[index]->name, next_token.lx) == 0)
+			{
+				return InfoNoError;
+			}
+		}
+		return (ParserInfo){undecIdentifier, next_token};
+	}
 	if (next_token.tp == ID ||
 		(strcmp(next_token.lx, "int") *
 		 strcmp(next_token.lx, "char") *
