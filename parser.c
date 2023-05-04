@@ -1207,6 +1207,16 @@ ParserInfo operand()
 				}
 			}
 		}
+		else
+		{
+			if (parsedOnce)
+			{
+				// check if the given identifier is
+				info = isVarInScope(&first_token);
+				if (info.er != none)
+					return info;
+			}
+		}
 		// [ [ expression ] | ( expressionList ) ] = [ expressionList ]
 		// means 0 or 1 of [expression] or (expressionList)
 		next_token = PeekNextToken();
