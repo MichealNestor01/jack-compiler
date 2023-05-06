@@ -68,29 +68,64 @@ ParserInfo compile(char *dir_name)
 
 			// concatonate the filepath and the file name
 			char filePath[1024];
+			char outputFilePath[1024];
 			strcpy(filePath, dir_name);
 			strcat(filePath, "/");
 			strcat(filePath, dir->d_name);
+			strcpy(outputFilePath, filePath);
 
-			// print the curent file
-			// printf("File Found: \"%s\"\n", dir->d_name);
-
-			// init parser
-			InitParser(filePath);
-			p = Parse();
-			if (p.er != none)
+			// skip if not a .jack file (I HAVE TO DO THIS HERE BECAUSE MY PROFS AUTO GRADER EXPECTS MY LEXER NOT TO :( )
+			int isJack = 1;
+			int lenFileName = strlen(dir->d_name);
+			char *fileExtension = ".jack";
+			for (
+				int extIndex = 0, fnIndex = lenFileName - 5;
+				extIndex < 5;
+				extIndex++, fnIndex++)
 			{
-				// printf("Error %d: token: \"%s\" near line %d\n", p.er, p.tk.lx, p.tk.ln);
-				closedir(dirObj);
-				return p;
-			}
-			else
-			{
-				// printf("%s Parsed with no errors\n", dir->d_name);
+				if (dir->d_name[fnIndex] != fileExtension[extIndex])
+				{
+					isJack = 0;
+					break;
+				}
 			}
 
-			// stop the parser
-			StopParser();
+			if (isJack)
+			{
+				// print the curent file
+				printf("File Found: \"%s\"\n", dir->d_name);
+
+				// if we are on the second pass create the vm file
+				if (parseIndex == 1)
+				{
+					// change file extension
+					int pathLength = strlen(outputFilePath);
+					outputFilePath[pathLength - 4] = 'v';
+					outputFilePath[pathLength - 3] = 'm';
+					outputFilePath[pathLength - 2] = '\0';
+					// this is going to need a global file
+					FILE *outputFile = fopen(outputFilePath, "w");
+					fprintf(outputFile, "Hello World");
+					fclose(outputFile);
+				}
+
+				// init parser
+				InitParser(filePath);
+				p = Parse();
+				if (p.er != none)
+				{
+					printf("Error %d: token: \"%s\" near line %d\n", p.er, p.tk.lx, p.tk.ln);
+					closedir(dirObj);
+					return p;
+				}
+				else
+				{
+					printf("%s Parsed with no errors\n", dir->d_name);
+				}
+
+				// stop the parser
+				StopParser();
+			}
 		}
 		closedir(dirObj);
 		incrementProgramTableParsed();
@@ -103,15 +138,14 @@ int StopCompiler()
 {
 	return 1;
 }
-/*
+
 #ifndef TEST_COMPILER
 int main()
 {
 	InitCompiler();
-	ParserInfo p = compile("Pong");
+	ParserInfo p = compile("Seven");
 	// PrintError(p);
 	StopCompiler();
 	return 1;
 }
 #endif
-*/
