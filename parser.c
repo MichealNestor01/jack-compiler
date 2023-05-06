@@ -2,8 +2,9 @@
 #include <string.h>
 #include <stdio.h>
 
-// #include "lexer.h"
+#include "lexer.h"
 #include "parser.h"
+#include "symbols.h"
 
 // error function
 void error(char *s)
@@ -12,12 +13,221 @@ void error(char *s)
 	exit(1);
 }
 
-// show debug statements
-int SHOWDEBUG = 0;
-int DEPTH = 0;
-
 // no error parser info
 ParserInfo InfoNoError;
+
+// symbol table functions
+ParserInfo addTokenToProgramTable(Token *token)
+{
+	// Check this class has not already been created
+	int index = 0;
+	ProgramTable *programTable = getProgramTable();
+	for (; index < programTable->count; index++)
+	{
+		if (strcmp(programTable->entries[index]->name, token->lx) == 0)
+		{
+			// class aready defined
+			return (ParserInfo){redecIdentifier, *token};
+		}
+	}
+	// create an entry for this class in the program table
+	ProgramTableEntry *entry = createProgramTableEntry(token->lx, index);
+	addToProgramTable(entry);
+	// push the current classTable to the top of the scope
+	pushScope((unsigned long)entry->table);
+	return InfoNoError;
+}
+
+void pushClassToScope(Token *token)
+{
+	ProgramTable *programTable = getProgramTable();
+	for (int index = 0; index < programTable->count; index++)
+	{
+		if (strcmp(programTable->entries[index]->name, token->lx) == 0)
+		{
+			pushScope((unsigned long)programTable->entries[index]->table);
+			return;
+		}
+	}
+}
+
+ParserInfo addVarTokenToClassTable(Token *token, char *typeString, char *kindString)
+{
+	// validate that this var has not already been defined
+	ClassTable *classTable = (ClassTable *)getScopeTop();
+	int index = 0;
+	for (; index < classTable->count; index++)
+	{
+		if (strcmp(classTable->entries[index]->name, token->lx) == 0)
+		{
+			// class aready defined
+			return (ParserInfo){redecIdentifier, *token};
+		}
+	}
+	// create an entry for this var in the class table
+	ClassTableEntry *entry = createClassTableEntry(token->lx, typeString, kindString, index);
+	addToClassTable(classTable, entry);
+	return InfoNoError;
+}
+
+ParserInfo addSubTokenToClassTable(Token *token, char *typeString, char *kindString)
+{
+	ClassTable *classTable = (ClassTable *)getScopeTop();
+	int index = 0;
+	for (; index < classTable->count; index++)
+	{
+		if (strcmp(classTable->entries[index]->name, token->lx) == 0)
+		{
+			// class aready defined
+			return (ParserInfo){redecIdentifier, *token};
+		}
+	}
+	// create an entry for this var in the class table
+	ClassTableEntry *entry = createClassTableEntryWithTable(token->lx, typeString, kindString, index);
+	addToClassTable(classTable, entry);
+	pushScope((unsigned long)entry->table);
+	return InfoNoError;
+}
+void pushSubToScope(Token *token)
+{
+	ClassTable *classTable = (ClassTable *)getScopeTop();
+	for (int index = 0; index < classTable->count; index++)
+	{
+		if (strcmp(classTable->entries[index]->name, token->lx) == 0)
+		{
+			pushScope((unsigned long)classTable->entries[index]->table);
+			return;
+		}
+	}
+}
+ParserInfo addTokenToSubroutineTable(Token *token, char *typeString, char *kindString)
+{
+	// check that this arg has not already been defined
+	SubroutineTable *table = (SubroutineTable *)getScopeTop();
+	int index = 0;
+	for (; index < table->count; index++)
+	{
+		if (strcmp(table->entries[index]->name, token->lx) == 0)
+		{
+			// argument already defined
+			return (ParserInfo){redecIdentifier, *token};
+		}
+	}
+	// create an entry for this argument in the table
+	SubroutineTableEntry *entry = createSubroutineTableEntry(token->lx, typeString, kindString, index);
+	addToSubroutineTable(table, entry);
+	return InfoNoError;
+}
+ParserInfo isVarInScope(Token *token)
+{
+	//  get the current subroutine table
+	SubroutineTable *subTable = (SubroutineTable *)getScopeTop();
+	//  get the current class table
+	ClassTable *classTable = (ClassTable *)getScopeClass();
+	// check that this identifier exists, first check sub table,
+	// then check the class table
+	for (int index = 0; index < subTable->count; index++)
+	{
+		if (strcmp(subTable->entries[index]->name, token->lx) == 0)
+			return InfoNoError;
+	}
+	for (int index = 0; index < classTable->count; index++)
+	{
+		if (strcmp(classTable->entries[index]->name, token->lx) == 0)
+			return InfoNoError;
+	}
+	// identifier has not been found
+	return (ParserInfo){undecIdentifier, *token};
+}
+
+ParserInfo isSubInScope(Token *token)
+{
+	// get the current class table
+	ClassTable *classTable = (ClassTable *)getScopeClass();
+	for (int index = 0; index < classTable->count; index++)
+	{
+		// printf("Checking %s against: %s of kind %s\n", token->lx, classTable->entries[index]->name, classTable->entries[index]->kind);
+		if (strcmp(classTable->entries[index]->name, token->lx) == 0)
+			return InfoNoError;
+	}
+	// identifier has not been found
+	return (ParserInfo){undecIdentifier, *token};
+}
+
+ClassTable *getMatchingClass(Token *token)
+{
+	// printf("Trying to find table: %s\n", token->lx);
+	ProgramTable *programTable = getProgramTable();
+	for (int index = 0; index < programTable->count; index++)
+	{
+		// printf("\tFound class table: %s\n", programTable->entries[index]->name);
+		if (strcmp(programTable->entries[index]->name, token->lx) == 0)
+			return programTable->entries[index]->table;
+	}
+	// printf("Not found table: %s\n", token->lx);
+	//  table not found
+	return (ClassTable *)0;
+}
+
+ParserInfo isSubInClass(Token *token, ClassTable *table)
+{
+	// printf("Does %s exist in the found table\n", token->lx);
+	for (int index = 0; index < table->count; index++)
+	{
+		// printf("Checking %s against: %s of kind %s\n", token->lx, table->entries[index]->name, table->entries[index]->kind);
+		if (strcmp(table->entries[index]->name, token->lx) == 0)
+			return InfoNoError;
+	}
+	// identifier has not been found
+	return (ParserInfo){undecIdentifier, *token};
+}
+ParserInfo isCallValid(Token *object, Token *subroutine)
+{
+	// get the type of the object
+	char *type = "";
+	//  get the current subroutine tab/le
+	SubroutineTable *subTable = (SubroutineTable *)getScopeTop();
+	//  get the current class table
+	ClassTable *classTable = (ClassTable *)getScopeClass();
+	for (int index = 0; index < subTable->count; index++)
+	{
+		if (strcmp(subTable->entries[index]->name, object->lx) == 0)
+		{
+			type = subTable->entries[index]->type;
+			break;
+		}
+	}
+	if (strcmp(type, "") == 0)
+	{
+		for (int index = 0; index < classTable->count; index++)
+		{
+			if (strcmp(classTable->entries[index]->name, object->lx) == 0)
+			{
+				type = classTable->entries[index]->type;
+				break;
+			}
+		}
+	}
+	// find the matching class table for the type of object
+	ProgramTable *programTable = getProgramTable();
+	for (int index = 0; index < programTable->count; index++)
+	{
+		if (strcmp(programTable->entries[index]->name, type) == 0)
+		{
+			classTable = programTable->entries[index]->table;
+			break;
+		}
+	}
+	// now look through the class table for the subroutine
+	for (int index = 0; index < classTable->count; index++)
+	{
+		if (strcmp(classTable->entries[index]->name, subroutine->lx) == 0)
+		{
+			return InfoNoError;
+		}
+	}
+	return (ParserInfo){undecIdentifier, *subroutine};
+}
 
 // class defnitions
 ParserInfo class();
@@ -47,36 +257,36 @@ ParserInfo dotIdentifier();
 ParserInfo wrappedExpressionList();
 ParserInfo operand();
 
-// you need to implemenent these grammars:
 // Class Grammar:
 // class→class identifier { { memeberDeclar } }
 ParserInfo class()
 {
-	DEPTH++;
-	int a = DEPTH;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING CLASS {%s}\n", DEPTH, t.lx);
+	int parsedOnce = getProgramTable()->parsedOnce;
+	ParserInfo info;
 	// class
 	Token next_token = GetNextToken();
 	if (strcmp(next_token.lx, "class") != 0)
-	{
 		return (ParserInfo){classExpected, next_token};
-	}
 	// identifier
 	next_token = GetNextToken();
 	if (next_token.tp != ID)
-	{
 		return (ParserInfo){idExpected, next_token};
+	// only add identifiers in the first parse
+	if (parsedOnce == 0)
+	{
+		info = addTokenToProgramTable(&next_token);
+		if (info.er != none)
+			return info;
+	}
+	else
+	{
+		pushClassToScope(&next_token);
 	}
 	// {
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, "{") != 0)
-	{
 		return (ParserInfo){openBraceExpected, next_token};
-	}
 	// {memberdeDeclar}
-	ParserInfo info;
 	next_token = PeekNextToken();
 	while ((strcmp(next_token.lx, "static") *
 			strcmp(next_token.lx, "field") *
@@ -84,32 +294,22 @@ ParserInfo class()
 			strcmp(next_token.lx, "function") *
 			strcmp(next_token.lx, "method")) == 0)
 	{
-		if (SHOWDEBUG)
-			printf("\tCurrent token: {%s}\n", next_token.lx);
 		info = memberDeclar();
 		if (info.er != none)
 			return info;
 		next_token = PeekNextToken();
-		if (SHOWDEBUG)
-			printf("\tToken for next memberDeclar: {%s}\n", next_token.lx);
 	}
 	// }
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, "}") != 0)
-	{
 		return (ParserInfo){closeBraceExpected, next_token};
-	}
-	if (SHOWDEBUG)
-		printf("Class Parsed Successfully\n");
+	// remove the class from the scope
+	popScope();
 	return InfoNoError;
 }
 // memberDeclar→classVarDeclar | subroutineDeclar
 ParserInfo memberDeclar()
 {
-	DEPTH++;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING memberDeclar {%s}\n", DEPTH, t.lx);
 	Token next_token = PeekNextToken();
 	// try classVarDeclare
 	// static|field
@@ -131,10 +331,8 @@ ParserInfo memberDeclar()
 // classVarDeclar→(static|field) type identifier {, identifier};
 ParserInfo classVarDeclar()
 {
-	DEPTH++;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING classVarDecalr {%s}\n", DEPTH, t.lx);
+	char *kindString = PeekNextToken().lx;
+	int parsedOnce = getProgramTable()->parsedOnce;
 	// static|field
 	Token next_token = GetNextToken();
 	if ((strcmp(next_token.lx, "static") *
@@ -142,6 +340,7 @@ ParserInfo classVarDeclar()
 	{
 		return (ParserInfo){syntaxError, next_token};
 	}
+	char *typeString = PeekNextToken().lx;
 	// type
 	ParserInfo info = type();
 	if (info.er != none)
@@ -150,6 +349,13 @@ ParserInfo classVarDeclar()
 	next_token = GetNextToken();
 	if (next_token.tp != ID)
 		return (ParserInfo){syntaxError, next_token};
+	// only add identifiers in the first parse
+	if (parsedOnce == 0)
+	{
+		info = addVarTokenToClassTable(&next_token, typeString, kindString);
+		if (info.er != none)
+			return info;
+	}
 	// {, identifier }
 	while (strcmp(PeekNextToken().lx, ",") == 0)
 	{
@@ -159,47 +365,54 @@ ParserInfo classVarDeclar()
 		Token next_token = GetNextToken();
 		if (next_token.tp != ID)
 			return (ParserInfo){idExpected, next_token};
+		// only add identifiers in the first parse
+		if (parsedOnce == 0)
+		{
+			info = addVarTokenToClassTable(&next_token, typeString, kindString);
+			if (info.er != none)
+				return info;
+		}
 	}
 	// ;
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, ";") != 0)
 		return (ParserInfo){semicolonExpected, next_token};
-	if (SHOWDEBUG)
-		printf("\tclassVarDeclar Parsed Successfully\n");
 	return InfoNoError;
 }
 // type→int|char|boolean|identifier
 ParserInfo type()
 {
-	DEPTH++;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING type {%s}\n", DEPTH, t.lx);
+	ProgramTable *programTable = getProgramTable();
 	// int|char|boolean|identifier
 	Token next_token = GetNextToken();
+	if (next_token.tp == ID && programTable->parsedOnce)
+	{
+		// check that the identifier is a valid type
+		for (int index = 0; index < programTable->count; index++)
+		{
+			if (strcmp(programTable->entries[index]->name, next_token.lx) == 0)
+			{
+				return InfoNoError;
+			}
+		}
+		return (ParserInfo){undecIdentifier, next_token};
+	}
 	if (next_token.tp == ID ||
 		(strcmp(next_token.lx, "int") *
 		 strcmp(next_token.lx, "char") *
 		 strcmp(next_token.lx, "boolean")) == 0)
 	{
-		// if (SHOWDEBUG) printf("type Parsed Successfully");
-
 		return InfoNoError;
 	}
-	if (SHOWDEBUG)
-		printf("type not parsed: (%s)\n", next_token.lx);
 	// should this be idExpected or Syntax error?
 	return (ParserInfo){idExpected, next_token};
 }
 // subroutineDeclar→( constructor|funtoin|method)( type | void ) identifier( paramList ) subroutineBody
 ParserInfo subroutineDeclar()
 {
-	DEPTH++;
-	int a = DEPTH;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING subroutineDeclar {%s}\n", DEPTH, t.lx);
 	ParserInfo info;
+	char *kindString = PeekNextToken().lx;
+	int parsedOnce = getProgramTable()->parsedOnce;
 	// (constructor|function|method)
 	Token next_token = GetNextToken();
 	if ((strcmp(next_token.lx, "constructor") *
@@ -208,7 +421,7 @@ ParserInfo subroutineDeclar()
 	{
 		return (ParserInfo){syntaxError, next_token};
 	}
-	// if (SHOWDEBUG) printf("\tSUBDEC: FOUND KEYWORD: (%s)\n", next_token.lx);
+	char *typeString = PeekNextToken().lx;
 	//  ( type | void )
 	next_token = PeekNextToken();
 	if (strcmp(next_token.lx, "void") == 0)
@@ -223,65 +436,60 @@ ParserInfo subroutineDeclar()
 		if (info.er != none)
 			return info;
 	}
-	// if (SHOWDEBUG) printf("\tSUBDEC: FOUND TYPE OR VOID: (%s)\n", next_token.lx);
 	//  identifier
 	next_token = GetNextToken();
-	if (SHOWDEBUG)
-		printf("\tNEED IDENTIFIER {%s} {%d}\n", next_token.lx, next_token.tp == ID);
 	if (next_token.tp != ID)
 		return (ParserInfo){idExpected, next_token};
-	// if (SHOWDEBUG) printf("\tSUBDEC: FOUND IDENTIFIER: (%s)\n", next_token.lx);
+	// only add identifiers in the first parse
+	if (parsedOnce == 0)
+	{
+		info = addSubTokenToClassTable(&next_token, typeString, kindString);
+		if (info.er != none)
+			return info;
+	}
+	else
+	{
+		pushSubToScope(&next_token);
+	}
 	//  (
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, "(") != 0)
 		return (ParserInfo){openParenExpected, next_token};
-	// if (SHOWDEBUG) printf("\tSUBDEC: FOUND OPEN PAREN: (%s)\n", next_token.lx);
 	//  check for closed brackets before checking param list
 	next_token = PeekNextToken();
 	if (strcmp(next_token.lx, ")") != 0)
 	{
 		// paramList
-		if (SHOWDEBUG)
-			printf("\tChecking paramlist\n");
 		info = paramList();
 		if (info.er != none)
 			return info;
 	}
-	////if (SHOWDEBUG) printf("\tSUBDEC: FOUND PARAMLIST\n");
 	// )
-	if (SHOWDEBUG)
-		printf("\tChecking close paren\n");
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, ")") != 0)
 	{
 		return (ParserInfo){closeParenExpected, next_token};
 	}
-	////if (SHOWDEBUG) printf("\tSUBDEC: FOUND CLOSED PAREN: (%s)\n", next_token.lx);
 	// subroutineBody
 	info = subroutineBody();
 	if (info.er != none)
 	{
-		if (SHOWDEBUG)
-			printf("\t(%d) ERROR CAUGHT IN SUBROUTINE BODY [%s]\n", a, info.tk.lx);
 		return info;
 	}
-	// if (SHOWDEBUG) printf("subroutine declare Parsed Successfully");
-
+	popScope();
 	return InfoNoError;
 }
 // paramList→(type identifier {, type identifier })|ϵ
 ParserInfo paramList()
 {
-	DEPTH++;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING paramList {%s}\n", DEPTH, t.lx);
+	int parsedOnce = getProgramTable()->parsedOnce;
 	Token next_token = PeekNextToken();
 	if (next_token.tp == ID ||
 		(strcmp(next_token.lx, "int") *
 		 strcmp(next_token.lx, "char") *
 		 strcmp(next_token.lx, "boolean")) == 0)
 	{
+		char *typeString = PeekNextToken().lx;
 		// type
 		ParserInfo info = type();
 		if (info.er != none)
@@ -294,11 +502,19 @@ ParserInfo paramList()
 		{
 			return (ParserInfo){idExpected, next_token};
 		}
+		// only add identifiers in the first parse
+		if (parsedOnce == 0)
+		{
+			info = addTokenToSubroutineTable(&next_token, typeString, "argument");
+			if (info.er != none)
+				return info;
+		}
 		//  {, type identifier }
 		while (strcmp(PeekNextToken().lx, ",") == 0)
 		{
 			//  eat the ,
 			GetNextToken();
+			char *typeString = PeekNextToken().lx;
 			// type
 			ParserInfo info = type();
 			if (info.er != none)
@@ -310,6 +526,13 @@ ParserInfo paramList()
 			if (next_token.tp != ID)
 			{
 				return (ParserInfo){idExpected, next_token};
+			}
+			// only add identifiers in the first parse
+			if (parsedOnce == 0)
+			{
+				info = addTokenToSubroutineTable(&next_token, typeString, "argument");
+				if (info.er != none)
+					return info;
 			}
 		}
 	}
@@ -324,17 +547,12 @@ ParserInfo subroutineBody()
 // wrappedZeroOrMoreStatements → { { statement } }
 ParserInfo wrappedZeroOrMoreStatements()
 {
-	DEPTH++;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING wrappedZeroOrMoreStatements {%s}\n", DEPTH, t.lx);
 	// {
 	Token next_token = GetNextToken();
 	if (strcmp(next_token.lx, "{") != 0)
 	{
 		return (ParserInfo){openBraceExpected, next_token};
 	}
-
 	// {statement} 0 or more statements
 	ParserInfo info;
 	next_token = PeekNextToken();
@@ -352,23 +570,18 @@ ParserInfo wrappedZeroOrMoreStatements()
 			return info;
 		next_token = PeekNextToken();
 	}
-
 	// }
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, "}") != 0)
 	{
 		return (ParserInfo){closeBraceExpected, next_token};
 	}
-
 	return InfoNoError;
 }
 // statement → varDeclarStatement | letStatemnt | ifStatement | whileStatement | doStatement | returnStatemnt
 ParserInfo statement()
 {
-	DEPTH++;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING statement {%s}\n", DEPTH, t.lx);
+
 	Token next_token = PeekNextToken();
 	if (strcmp(next_token.lx, "var") == 0)
 	{
@@ -399,16 +612,14 @@ ParserInfo statement()
 // varDeclarStatement→var type identifier {, identifier };
 ParserInfo varDeclarStatement()
 {
-	DEPTH++;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING varDeclarStatement {%s}\n", DEPTH, t.lx);
+	int parsedOnce = getProgramTable()->parsedOnce;
 	// var
 	Token next_token = GetNextToken();
 	if (strcmp(next_token.lx, "var") != 0)
 	{
 		return (ParserInfo){syntaxError, next_token};
 	}
+	char *typeString = PeekNextToken().lx;
 	// type
 	ParserInfo info = type();
 	if (info.er != none)
@@ -421,6 +632,13 @@ ParserInfo varDeclarStatement()
 	{
 		return (ParserInfo){idExpected, next_token};
 	}
+	// check that the identifier has not already been defined
+	if (parsedOnce == 0)
+	{
+		info = addTokenToSubroutineTable(&next_token, typeString, "var");
+		if (info.er != none)
+			return info;
+	}
 	// {, identifier }
 	while (strcmp(PeekNextToken().lx, ",") == 0)
 	{
@@ -431,6 +649,13 @@ ParserInfo varDeclarStatement()
 		if (next_token.tp != ID)
 		{
 			return (ParserInfo){idExpected, next_token};
+		}
+		if (parsedOnce == 0)
+		{
+			// check that the identifier has not already been defined
+			info = addTokenToSubroutineTable(&next_token, typeString, "var");
+			if (info.er != none)
+				return info;
 		}
 	}
 	// ;
@@ -445,51 +670,45 @@ ParserInfo varDeclarStatement()
 // letStatement → let identifier [ [ expression ] ] = expression ;
 ParserInfo letStatement()
 {
-	DEPTH++;
-	int a = DEPTH;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING letStatement {%s}\n", DEPTH, t.lx);
+	ParserInfo info;
+	int parsedOnce = getProgramTable()->parsedOnce;
 	// let
 	Token next_token = GetNextToken();
 	if (strcmp(next_token.lx, "let") != 0)
 	{
 		return (ParserInfo){syntaxError, next_token};
 	}
-	if (SHOWDEBUG)
-		printf("\tFound let\n");
 	// identifier
 	next_token = GetNextToken();
 	if (next_token.tp != ID)
 	{
 		return (ParserInfo){idExpected, next_token};
 	}
-	if (SHOWDEBUG)
-		printf("\tFound identifier\n");
+	// check that this identifier exists
+	if (parsedOnce == 0)
+	{
+		info = isVarInScope(&next_token);
+		if (info.er != 0)
+			return info;
+	}
 	// [ [identifier] ]
 	next_token = PeekNextToken();
 	if (strcmp(next_token.lx, "[") == 0)
 	{
-		if (SHOWDEBUG)
-			printf("\tFound [\n");
 		// eat the "["
 		GetNextToken();
-		// identifier
-		next_token = GetNextToken();
-		if (next_token.tp != ID)
+		// expression
+		info = expression();
+		if (info.er != none)
 		{
-			return (ParserInfo){idExpected, next_token};
+			return info;
 		}
-		if (SHOWDEBUG)
-			printf("\tFound identifier\n");
 		// "]"
 		next_token = GetNextToken();
 		if (strcmp(next_token.lx, "]") != 0)
 		{
 			return (ParserInfo){syntaxError, next_token};
 		}
-		if (SHOWDEBUG)
-			printf("\tFound ]\n");
 	}
 	// =
 	next_token = GetNextToken();
@@ -497,40 +716,23 @@ ParserInfo letStatement()
 	{
 		return (ParserInfo){equalExpected, next_token};
 	}
-	if (SHOWDEBUG)
-		printf("\tFound =\n");
 	// expression
-	ParserInfo info = expression();
+	info = expression();
 	if (info.er != none)
 	{
-		if (SHOWDEBUG)
-			printf("\t(%d) error caught in expression [%s]\n", a, info.tk.lx);
 		return info;
 	}
-	if (SHOWDEBUG)
-		printf("\tFound expression\n");
 	// ;
 	next_token = GetNextToken();
-	if (SHOWDEBUG)
-		printf("\tNextToken: {%s} near {%d}\n", next_token.lx, next_token.ln);
 	if (strcmp(next_token.lx, ";") != 0)
 	{
 		return (ParserInfo){semicolonExpected, next_token};
 	}
-	if (SHOWDEBUG)
-		printf("\tFound ;\n");
-	if (SHOWDEBUG)
-		printf("PARSED letStatement\n");
-
 	return InfoNoError;
 }
 // ifStatement→if ( expression ) { { statement } } [ else { { statement } } ]
 ParserInfo ifStatement()
 {
-	DEPTH++;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING ifStatement {%s}\n", DEPTH, t.lx);
 	// if
 	Token next_token = GetNextToken();
 	if (strcmp(next_token.lx, "if") != 0)
@@ -566,10 +768,6 @@ ParserInfo ifStatement()
 // whileStatement → while ( expression ) { { statement } }
 ParserInfo whileStatement()
 {
-	DEPTH++;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING whileStatement {%s}\n", DEPTH, t.lx);
 	// while
 	Token next_token = GetNextToken();
 	if (strcmp(next_token.lx, "while") != 0)
@@ -587,18 +785,11 @@ ParserInfo whileStatement()
 		return info;
 	}
 	// successfully parsed
-	if (SHOWDEBUG)
-		printf("\tParsed while statement\n");
-
 	return InfoNoError;
 }
 // doStatement → do subroutineCall ;
 ParserInfo doStatement()
 {
-	DEPTH++;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING doStatement {%s}\n", DEPTH, t.lx);
 	// do
 	Token next_token = GetNextToken();
 	if (strcmp(next_token.lx, "do") != 0)
@@ -611,8 +802,6 @@ ParserInfo doStatement()
 		return info;
 	// ;
 	next_token = GetNextToken();
-	if (SHOWDEBUG)
-		printf("\tDO STATEMENT - LOOKING FOR ; {%s}", next_token);
 	if (strcmp(next_token.lx, ";") != 0)
 	{
 		return (ParserInfo){semicolonExpected, next_token};
@@ -623,36 +812,70 @@ ParserInfo doStatement()
 // subroutineCall → identifier [.identifier] ( expressionList )
 ParserInfo subroutineCall()
 {
-	DEPTH++;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING subroutineCall {%s}\n", DEPTH, t.lx);
+	ParserInfo info;
+	int parsedOnce = getProgramTable()->parsedOnce;
 	// identifier
-	Token next_token = GetNextToken();
-	if (next_token.tp != ID)
+	Token first_token = GetNextToken();
+	if (first_token.tp != ID)
 	{
-		return (ParserInfo){idExpected, next_token};
+		return (ParserInfo){idExpected, first_token};
 	}
-	next_token = PeekNextToken();
+	Token next_token = PeekNextToken();
 	// [ .identifier ]
 	if (strcmp(next_token.lx, ".") == 0)
 	{
-		ParserInfo info = dotIdentifier();
-		if (info.er != none)
-			return info;
+		// info = dotIdentifier();
+		// if (info.er != none)
+		//	return info;
+		next_token = GetNextToken();
+		// .
+		if (strcmp(next_token.lx, ".") != 0)
+			return (ParserInfo){syntaxError, next_token};
+		// identifier
+		next_token = GetNextToken();
+		if (next_token.tp != ID)
+			return (ParserInfo){idExpected, next_token};
+		// first check if the first idenfifier exists in scope
+		//
+		// check if the first identifier is a class that has been parsed
+		// and then check if the current identifier exists in that scope
+		if (parsedOnce)
+		{
+			info = isVarInScope(&first_token);
+			// printf("Checked is var in scope\n");
+			if (info.er != none)
+			{
+				ClassTable *table = getMatchingClass(&first_token);
+				if (table == 0)
+					return (ParserInfo){undecIdentifier, first_token};
+				info = isSubInClass(&next_token, table);
+				if (info.er != none)
+					return info;
+			}
+			else
+			{
+				info = isCallValid(&first_token, &next_token);
+				if (info.er != none)
+					return info;
+			}
+		}
+	}
+	else
+	{
+		// check if subroutine is in scope
+		if (parsedOnce)
+		{
+			info = isSubInScope(&first_token);
+			if (info.er != none)
+				return info;
+		}
 	}
 	// ( expressionList )
-	if (SHOWDEBUG)
-		printf("\tCalling wrapped expresison list {%s}\n", next_token.lx);
 	return wrappedExpressionList();
 }
 // expressoinList → expression {, expression }|ϵ
 ParserInfo expressionList()
 {
-	DEPTH++;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING expressionList {%s}\n", DEPTH, t.lx);
 	ParserInfo info = expression();
 	if (info.er != none)
 		return info;
@@ -672,10 +895,6 @@ ParserInfo expressionList()
 // returnStatement → return [ expression ];
 ParserInfo returnStatement()
 {
-	DEPTH++;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING returnStatement {%s}\n", DEPTH, t.lx);
 	Token next_token = GetNextToken();
 	// return
 	if (strcmp(next_token.lx, "return") != 0)
@@ -709,17 +928,10 @@ ParserInfo returnStatement()
 // expresion→ relationalExpression {( & | | ) relationalExpression }
 ParserInfo expression()
 {
-	DEPTH++;
-	int a = DEPTH;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING expression {%s}\n", DEPTH, t.lx);
 	// relationalExpression
 	ParserInfo info = relationalExpression();
 	if (info.er != none)
 	{
-		if (SHOWDEBUG)
-			printf("\t(%d) Bad REXPRESS found in EXPRESS [%s]\n", a, info.tk.lx);
 		return info;
 	}
 	// {( & | | ) relationalExpression }
@@ -735,8 +947,6 @@ ParserInfo expression()
 			return info;
 		next_token = PeekNextToken();
 	}
-	if (SHOWDEBUG)
-		printf("PARSED expression\n");
 	// no error encountered
 
 	return InfoNoError;
@@ -744,18 +954,10 @@ ParserInfo expression()
 // relationalExpression→ arithmeticExpression {( = | > | < ) arithmeticExpression }
 ParserInfo relationalExpression()
 {
-	DEPTH++;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING relationalExpression {%s}\n", DEPTH, t.lx);
 	// arithmeticExpression
 	ParserInfo info = arithmeticExpression();
 	if (info.er != none)
-	{
-		if (SHOWDEBUG)
-			printf("\t(%d) BAD AExpress found in REXPRESS\n", DEPTH);
 		return info;
-	}
 	// {( = | > | < ) arithmeticExpression }
 	Token next_token = PeekNextToken();
 	while ((strcmp(next_token.lx, "=") *
@@ -767,27 +969,15 @@ ParserInfo relationalExpression()
 		// arithmeticExpression
 		info = arithmeticExpression();
 		if (info.er != none)
-		{
-			if (SHOWDEBUG)
-				printf("\t(%d) Bad AExpress found in RExpress 2\n", DEPTH);
 			return info;
-		}
 		next_token = PeekNextToken();
 	}
-	if (SHOWDEBUG)
-		printf("PARSED relationalExpression\n");
 	// no error encountered
-
 	return InfoNoError;
 }
 // arithmeticExpression → term {( + | - ) term }
 ParserInfo arithmeticExpression()
 {
-	DEPTH++;
-	int a = DEPTH;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING arithmeticExpression {%s}\n", DEPTH, t.lx);
 	// term
 	ParserInfo info = term();
 	if (info.er != none)
@@ -802,16 +992,9 @@ ParserInfo arithmeticExpression()
 		// term
 		info = term();
 		if (info.er != none)
-		{
-			if (SHOWDEBUG)
-				printf("\t(%d) Bad term found in AExpress [%s]\n", a, info.tk.lx);
-
 			return info;
-		}
 		next_token = PeekNextToken();
 	}
-	if (SHOWDEBUG)
-		printf("PARSED arithmeticExpression\n");
 	// no error encountered
 
 	return InfoNoError;
@@ -819,19 +1002,10 @@ ParserInfo arithmeticExpression()
 // term → factor {( * | / ) factor }
 ParserInfo term()
 {
-	DEPTH++;
-	int a = DEPTH;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING term {%s}\n", DEPTH, t.lx);
 	// factor
 	ParserInfo info = factor();
 	if (info.er != none)
-	{
-		if (SHOWDEBUG)
-			printf("\t(%d) Bad factor found in term [%s]\n", a, info.tk.lx);
 		return info;
-	}
 	// {( * | / ) factor }
 	Token next_token = PeekNextToken();
 	while ((strcmp(next_token.lx, "*") *
@@ -845,8 +1019,6 @@ ParserInfo term()
 			return info;
 		next_token = PeekNextToken();
 	}
-	if (SHOWDEBUG)
-		printf("PARSED term\n");
 	// if we have reached here there is a term parsed and no error
 
 	return InfoNoError;
@@ -854,10 +1026,6 @@ ParserInfo term()
 // factor →( - | ~ |ϵ) operand
 ParserInfo factor()
 {
-	DEPTH++;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING factor {%s}\n", DEPTH, t.lx);
 	Token next_token = PeekNextToken();
 	// - or ~
 	if ((strcmp(next_token.lx, "-") *
@@ -865,7 +1033,6 @@ ParserInfo factor()
 	{
 		// eat the token before checking the operand
 		GetNextToken();
-		return operand();
 	}
 	// ϵ (no preceding token)
 	// operand
@@ -874,29 +1041,20 @@ ParserInfo factor()
 // dotIdentifier → .identifier
 ParserInfo dotIdentifier()
 {
-	DEPTH++;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING dotIdentifier {%s}\n", DEPTH, t.lx);
 	Token next_token = GetNextToken();
 	// .
 	if (strcmp(next_token.lx, ".") != 0)
 		return (ParserInfo){syntaxError, next_token};
-	if (SHOWDEBUG)
-		printf("\tParsed Dot\n");
 	// identifier
 	next_token = GetNextToken();
 	if (next_token.tp != ID)
 		return (ParserInfo){idExpected, next_token};
-	if (SHOWDEBUG)
-		printf("\tParsed Identifier\n");
-
-	return InfoNoError;
+	// check if the identifier exists and return this result
+	return InfoNoError; // isVarInScope(&next_token);
 }
 // wrappedExpressionList → (expressionList)
 ParserInfo wrappedExpressionList()
 {
-	DEPTH++;
 	// (
 	Token next_token = GetNextToken();
 	if (strcmp(next_token.lx, "(") != 0)
@@ -913,10 +1071,7 @@ ParserInfo wrappedExpressionList()
 	// expressionList
 	ParserInfo info = expressionList();
 	if (info.er != none)
-	{
-		printf("\tExpressionList returned error\n");
 		return info;
-	}
 	// )
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, ")") != 0)
@@ -929,10 +1084,6 @@ ParserInfo wrappedExpressionList()
 // wrappedExpression → ( expression )
 ParserInfo wrappedExpression()
 {
-	DEPTH++;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING wrappedExpression {%s}\n", DEPTH, t.lx);
 	// (
 	Token next_token = GetNextToken();
 	if (strcmp(next_token.lx, "(") != 0)
@@ -961,10 +1112,6 @@ ParserInfo wrappedExpression()
 // operand → integerConstant | identifier [.identifier][[ expression ]|( expressionList ) ] | ( expression ) | stringLiteral | true | false | null | this
 ParserInfo operand()
 {
-	DEPTH++;
-	Token t = PeekNextToken();
-	if (SHOWDEBUG)
-		printf("(%d) PARSING operand {%s}\n", DEPTH, t.lx);
 	ParserInfo info;
 	Token next_token = GetNextToken();
 	// integerConstant
@@ -994,8 +1141,6 @@ ParserInfo operand()
 	// ( expression )
 	else if (strcmp(next_token.lx, "(") == 0)
 	{
-		if (SHOWDEBUG)
-			printf("\tFound bracket\n");
 		// check for ) skip extra recursion
 		next_token = PeekNextToken();
 		if (strcmp(next_token.lx, ")") == 0)
@@ -1017,59 +1162,84 @@ ParserInfo operand()
 	// identifier [ .identifier ][ [expression] | ( expressionList ) ]
 	else if (next_token.tp == ID)
 	{
-		if (SHOWDEBUG)
-			printf("\tFound identifier\n");
+		int parsedOnce = getProgramTable()->parsedOnce;
+		Token first_token = next_token;
+
+		// check if the identifier exists
+		// ParserInfo info = isVarInScope(&next_token);
+		// if (info.er != none)
+		//	return info;
+
 		next_token = PeekNextToken();
-		if (SHOWDEBUG)
-			printf("\tcurrent token: {%s}\n", next_token.lx);
 		// [ .identifier ]
 		if (strcmp(next_token.lx, ".") == 0)
 		{
-			info = dotIdentifier();
-			if (info.er != none)
-				return info;
-			if (SHOWDEBUG)
-				printf("\tFound [.identifier]\n");
+			// info = dotIdentifier();
+			// if (info.er != none)
+			//	return info;
+			next_token = GetNextToken();
+			// .
+			if (strcmp(next_token.lx, ".") != 0)
+				return (ParserInfo){syntaxError, next_token};
+			// identifier
+			next_token = GetNextToken();
+			if (next_token.tp != ID)
+				return (ParserInfo){idExpected, next_token};
+			// check if the first identifier is a class that has been parsed
+			// and then check if the current identifier exists in that scope
+			if (parsedOnce)
+			{
+				info = isVarInScope(&first_token);
+				if (info.er != none)
+				{
+					ClassTable *table = getMatchingClass(&first_token);
+					if (table == 0)
+						return (ParserInfo){undecIdentifier, first_token};
+					info = isSubInClass(&next_token, table);
+					if (info.er != none)
+						return info;
+				}
+				else
+				{
+					info = isCallValid(&first_token, &next_token);
+					if (info.er != none)
+						return info;
+				}
+			}
 		}
 		else
 		{
-			if (SHOWDEBUG)
-				printf("\tNo [.identifier]\n");
+			if (parsedOnce)
+			{
+				// check if the given identifier is
+				info = isVarInScope(&first_token);
+				if (info.er != none)
+					return info;
+			}
 		}
-
 		// [ [ expression ] | ( expressionList ) ] = [ expressionList ]
 		// means 0 or 1 of [expression] or (expressionList)
 		next_token = PeekNextToken();
-		if (SHOWDEBUG)
-			printf("\tcurrent token: {%s}\n", next_token.lx);
 		if (strcmp(next_token.lx, "(") == 0)
 		{
+			// check if subroutine is in scope
 			info = wrappedExpressionList();
 			if (info.er != none)
 				return info;
 		}
 		else if (strcmp(next_token.lx, "[") == 0)
 		{
-			if (SHOWDEBUG)
-				printf("\t(%d) Found [, looking for expression\n", DEPTH);
-			int a = DEPTH;
 			// [expression]
 			// eat the [
 			GetNextToken();
 			// expression
-			ParserInfo info = expression();
+			info = expression();
 			if (info.er != none)
 				return info;
-			if (SHOWDEBUG)
-				printf("\t(%d) Looking for close bracket\n", a);
 			// ]
 			next_token = GetNextToken();
-			if (SHOWDEBUG)
-				printf("\t(%d) current token: {%s}\n", a, next_token.lx);
 			if (strcmp(next_token.lx, "]") != 0)
 			{
-				if (SHOWDEBUG)
-					printf("\t(%d) Not found\n", a);
 				return (ParserInfo){closeBracketExpected, next_token};
 			}
 		}
@@ -1077,9 +1247,6 @@ ParserInfo operand()
 	else
 		return (ParserInfo){syntaxError, next_token};
 	// successfully parsed, return no error
-	if (SHOWDEBUG)
-		printf("PARSED operand\n");
-
 	return InfoNoError;
 }
 // you can declare prototypes of parser functions below
@@ -1093,7 +1260,6 @@ int InitParser(char *file_name)
 		printf("Lexer encountered an error\n");
 		return lexerError;
 	}
-
 	// set info no error
 	Token t = PeekNextToken();
 	InfoNoError = (ParserInfo){none, t};
@@ -1130,7 +1296,7 @@ int StopParser()
 	StopLexer();
 	return 1;
 }
-
+/*
 #ifndef TEST_PARSER
 int main()
 {
@@ -1140,4 +1306,4 @@ int main()
 	printf("End\n");
 	return 1;
 }
-#endif
+#endif*/
