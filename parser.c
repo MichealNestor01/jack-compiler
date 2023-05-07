@@ -990,12 +990,16 @@ ParserInfo relationalExpression()
 // arithmeticExpression → term {( + | - ) term }
 ParserInfo arithmeticExpression()
 {
+	int parsedOnce = getProgramTable()->parsedOnce;
+	FILE *outputFile = getOutputFile();
 	// term
 	ParserInfo info = term();
 	if (info.er != none)
 		return info;
 	// {( + | - ) term }
 	Token next_token = PeekNextToken();
+	char opp[128];
+	strcpy(opp, next_token.lx);
 	while ((strcmp(next_token.lx, "+") *
 			strcmp(next_token.lx, "-")) == 0)
 	{
@@ -1005,6 +1009,13 @@ ParserInfo arithmeticExpression()
 		info = term();
 		if (info.er != none)
 			return info;
+		if (parsedOnce)
+		{
+			if (strcmp(opp, "+") == 0)
+				fprintf(outputFile, "add\n");
+			else
+				fprintf(outputFile, "sub\n");
+		}
 		next_token = PeekNextToken();
 	}
 	// no error encountered
@@ -1014,12 +1025,16 @@ ParserInfo arithmeticExpression()
 // term → factor {( * | / ) factor }
 ParserInfo term()
 {
+	int parsedOnce = getProgramTable()->parsedOnce;
+	FILE *outputFile = getOutputFile();
 	// factor
 	ParserInfo info = factor();
 	if (info.er != none)
 		return info;
 	// {( * | / ) factor }
 	Token next_token = PeekNextToken();
+	char opp[128];
+	strcpy(opp, next_token.lx);
 	while ((strcmp(next_token.lx, "*") *
 			strcmp(next_token.lx, "/")) == 0)
 	{
@@ -1029,10 +1044,16 @@ ParserInfo term()
 		info = factor();
 		if (info.er != none)
 			return info;
+		if (parsedOnce)
+		{
+			if (strcmp(opp, "*") == 0)
+				fprintf(outputFile, "call Math.multiply 2\n");
+			else
+				fprintf(outputFile, "call Math.divide 2\n");
+		}
 		next_token = PeekNextToken();
 	}
 	// if we have reached here there is a term parsed and no error
-
 	return InfoNoError;
 }
 // factor →( - | ~ |ϵ) operand
@@ -1235,6 +1256,7 @@ ParserInfo operand()
 					return info;
 				// this does not check yet for class vars
 				// gonna need to implement that
+				/*
 				int varCount = 0;
 				SubroutineTable *table = (SubroutineTable *)getScopeTop();
 				for (int i = 0; i < table->count; i++)
@@ -1248,6 +1270,7 @@ ParserInfo operand()
 					}
 				}
 				fprintf(outputFile, "push local %d\n", varCount);
+				*/
 			}
 		}
 		// [ [ expression ] | ( expressionList ) ] = [ expressionList ]
