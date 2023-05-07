@@ -14,6 +14,9 @@ void error(char *s)
 	exit(1);
 }
 
+// output buffer
+char outputBuffer[128];
+
 // no error parser info
 ParserInfo InfoNoError;
 
@@ -802,16 +805,21 @@ ParserInfo whileStatement()
 // doStatement → do subroutineCall ;
 ParserInfo doStatement()
 {
+	int parsedOnce = getProgramTable()->parsedOnce;
+	FILE *outputFile = getOutputFile();
 	// do
 	Token next_token = GetNextToken();
 	if (strcmp(next_token.lx, "do") != 0)
 	{
 		return (ParserInfo){syntaxError, next_token};
 	}
+	strcpy(outputBuffer, "do ");
 	// subroutineCall
 	ParserInfo info = subroutineCall();
 	if (info.er != none)
 		return info;
+	if (parsedOnce)
+		fprintf(outputFile, "%s 1\npop temp 0\n", outputBuffer);
 	// ;
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, ";") != 0)
@@ -832,10 +840,12 @@ ParserInfo subroutineCall()
 	{
 		return (ParserInfo){idExpected, first_token};
 	}
+	strcat(outputBuffer, first_token.lx);
 	Token next_token = PeekNextToken();
 	// [ .identifier ]
 	if (strcmp(next_token.lx, ".") == 0)
 	{
+		strcat(outputBuffer, ".");
 		// info = dotIdentifier();
 		// if (info.er != none)
 		//	return info;
@@ -847,6 +857,7 @@ ParserInfo subroutineCall()
 		next_token = GetNextToken();
 		if (next_token.tp != ID)
 			return (ParserInfo){idExpected, next_token};
+		strcat(outputBuffer, next_token.lx);
 		// first check if the first idenfifier exists in scope
 		//
 		// check if the first identifier is a class that has been parsed
