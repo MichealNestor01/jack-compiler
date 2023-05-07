@@ -813,7 +813,7 @@ ParserInfo doStatement()
 	{
 		return (ParserInfo){syntaxError, next_token};
 	}
-	strcpy(outputBuffer, "do ");
+	strcpy(outputBuffer, "call ");
 	// subroutineCall
 	ParserInfo info = subroutineCall();
 	if (info.er != none)
