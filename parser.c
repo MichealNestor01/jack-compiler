@@ -918,14 +918,25 @@ ParserInfo expressionList()
 // returnStatement → return [ expression ];
 ParserInfo returnStatement()
 {
+	int parsedOnce = getProgramTable()->parsedOnce;
+	FILE *outputFile = getOutputFile();
 	Token next_token = GetNextToken();
 	// return
 	if (strcmp(next_token.lx, "return") != 0)
 	{
 		return (ParserInfo){syntaxError, next_token};
 	}
-	// [ expression ]
 	next_token = PeekNextToken();
+	// check for ; first to avoid unecessary checks
+	if (strcmp(next_token.lx, ";") == 0)
+	{
+		GetNextToken();
+		if (parsedOnce)
+			fprintf(outputFile, "push constant 0\nreturn\n");
+		return InfoNoError;
+	}
+
+	// [ expression ]
 	if ((strcmp(next_token.lx, "-") *
 		 strcmp(next_token.lx, "~") *
 		 strcmp(next_token.lx, "(")) == 0 ||
