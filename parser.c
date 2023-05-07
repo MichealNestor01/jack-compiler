@@ -1132,9 +1132,7 @@ ParserInfo operand()
 	if (next_token.tp == INT)
 	{
 		if (parsedOnce)
-		{
 			fprintf(outputFile, "push constant %s\n", next_token.lx);
-		}
 		return InfoNoError;
 	}
 	// stringLiteral
