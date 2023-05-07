@@ -452,7 +452,7 @@ ParserInfo subroutineDeclar()
 	{
 		char *className = ((ClassTable *)getScopeTop())->name;
 		pushSubToScope(&next_token);
-		// write kindString class.subName varCount to the output file
+		// write "function class.subName varCount" to the output file
 		int varCount = 0;
 		SubroutineTable *table = (SubroutineTable *)getScopeTop();
 		for (int i = 0; i < table->count; i++)
