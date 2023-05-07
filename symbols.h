@@ -44,6 +44,7 @@ struct ClassTable
     ClassTableEntry **entries;
     int capacity;
     int count;
+    char name[128];
 };
 
 // struct for the subroutine symbol table

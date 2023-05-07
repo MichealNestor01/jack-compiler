@@ -20,6 +20,11 @@ Date Work Commenced:
 #include <sys/syscall.h>
 #include "compiler.h"
 
+FILE *getOutputFile()
+{
+	return outputFile;
+}
+
 int InitCompiler()
 {
 	// init the symbol table
@@ -104,9 +109,7 @@ ParserInfo compile(char *dir_name)
 					outputFilePath[pathLength - 3] = 'm';
 					outputFilePath[pathLength - 2] = '\0';
 					// this is going to need a global file
-					FILE *outputFile = fopen(outputFilePath, "w");
-					fprintf(outputFile, "Hello World");
-					fclose(outputFile);
+					outputFile = fopen(outputFilePath, "w");
 				}
 
 				// init parser
@@ -125,6 +128,8 @@ ParserInfo compile(char *dir_name)
 
 				// stop the parser
 				StopParser();
+				if (parseIndex == 1)
+					fclose(outputFile);
 			}
 		}
 		closedir(dirObj);
@@ -143,7 +148,7 @@ int StopCompiler()
 int main()
 {
 	InitCompiler();
-	ParserInfo p = compile("Seven");
+	ParserInfo p = compile("Fraction");
 	// PrintError(p);
 	StopCompiler();
 	return 1;

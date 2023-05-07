@@ -5,6 +5,7 @@
 #include "lexer.h"
 #include "parser.h"
 #include "symbols.h"
+#include "compiler.h"
 
 // error function
 void error(char *s)
@@ -449,7 +450,18 @@ ParserInfo subroutineDeclar()
 	}
 	else
 	{
+		char *className = ((ClassTable *)getScopeTop())->name;
 		pushSubToScope(&next_token);
+		// write kindString class.subName varCount to the output file
+		int varCount = 0;
+		SubroutineTable *table = (SubroutineTable *)getScopeTop();
+		for (int i = 0; i < table->count; i++)
+		{
+			if (strcmp(table->entries[i]->kind, "var") == 0)
+				varCount++;
+		}
+		FILE *outputFile = getOutputFile();
+		fprintf(outputFile, "function %s.%s %d\n", className, next_token.lx, varCount);
 	}
 	//  (
 	next_token = GetNextToken();

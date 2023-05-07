@@ -80,7 +80,7 @@ ProgramTableEntry *createProgramTableEntry(char *name, int index)
     ProgramTableEntry *entry = (ProgramTableEntry *)malloc(sizeof(ProgramTableEntry));
     strcpy(entry->name, name);
     entry->index = index;
-    entry->table = createClassTable();
+    entry->table = createClassTable(name);
     return entry;
 }
 
@@ -121,12 +121,13 @@ SubroutineTableEntry *createSubroutineTableEntry(char *name, char *type, char *k
     return entry;
 }
 
-ClassTable *createClassTable()
+ClassTable *createClassTable(char *name)
 {
     ClassTable *table = (ClassTable *)malloc(sizeof(ClassTable));
     table->entries = (ClassTableEntry **)malloc(10 * sizeof(ClassTableEntry *));
     table->capacity = 10;
     table->count = 0;
+    strcpy(table->name, name);
     return table;
 }
 
