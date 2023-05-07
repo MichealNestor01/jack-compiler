@@ -1124,11 +1124,19 @@ ParserInfo wrappedExpression()
 // operand → integerConstant | identifier [.identifier][[ expression ]|( expressionList ) ] | ( expression ) | stringLiteral | true | false | null | this
 ParserInfo operand()
 {
+	int parsedOnce = getProgramTable()->parsedOnce;
+	FILE *outputFile = getOutputFile();
 	ParserInfo info;
 	Token next_token = GetNextToken();
 	// integerConstant
 	if (next_token.tp == INT)
+	{
+		if (parsedOnce)
+		{
+			fprintf(outputFile, "push constant %s\n", next_token.lx);
+		}
 		return InfoNoError;
+	}
 	// stringLiteral
 	else if (next_token.tp == STRING)
 		return InfoNoError;
@@ -1174,7 +1182,7 @@ ParserInfo operand()
 	// identifier [ .identifier ][ [expression] | ( expressionList ) ]
 	else if (next_token.tp == ID)
 	{
-		int parsedOnce = getProgramTable()->parsedOnce;
+
 		Token first_token = next_token;
 
 		// check if the identifier exists
@@ -1227,6 +1235,21 @@ ParserInfo operand()
 				info = isVarInScope(&first_token);
 				if (info.er != none)
 					return info;
+				// this does not check yet for class vars
+				// gonna need to implement that
+				int varCount = 0;
+				SubroutineTable *table = (SubroutineTable *)getScopeTop();
+				for (int i = 0; i < table->count; i++)
+				{
+					if (strcmp(table->entries[i]->kind, "var") == 0)
+					{
+
+						if (strcmp(table->entries[i]->name, first_token.lx) == 0)
+							break;
+						varCount++;
+					}
+				}
+				fprintf(outputFile, "push local %d\n", varCount);
 			}
 		}
 		// [ [ expression ] | ( expressionList ) ] = [ expressionList ]

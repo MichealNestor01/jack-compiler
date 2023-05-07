@@ -148,7 +148,7 @@ int StopCompiler()
 int main()
 {
 	InitCompiler();
-	ParserInfo p = compile("Fraction");
+	ParserInfo p = compile("Seven");
 	// PrintError(p);
 	StopCompiler();
 	return 1;
