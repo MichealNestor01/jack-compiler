@@ -467,6 +467,8 @@ ParserInfo subroutineDeclar()
 		fprintf(outputFile, "function %s.%s %d\n", className, next_token.lx, varCount);
 		if (strcmp(kindString, "constructor") == 0)
 			fprintf(outputFile, "push constant 2\ncall Memory.alloc 1\npop pointer 0\n");
+		else
+			fprintf(outputFile, "push argument 0\npop pointer 0\n");
 	}
 	//  (
 	next_token = GetNextToken();
@@ -1273,6 +1275,7 @@ ParserInfo operand()
 	{
 
 		Token first_token = next_token;
+		Token second_token;
 
 		// check if the identifier exists
 		// ParserInfo info = isVarInScope(&next_token);
@@ -1280,9 +1283,11 @@ ParserInfo operand()
 		//	return info;
 
 		next_token = PeekNextToken();
+		int dotId = 0;
 		// [ .identifier ]
 		if (strcmp(next_token.lx, ".") == 0)
 		{
+			dotId = 1;
 			// info = dotIdentifier();
 			// if (info.er != none)
 			//	return info;
@@ -1292,6 +1297,7 @@ ParserInfo operand()
 				return (ParserInfo){syntaxError, next_token};
 			// identifier
 			next_token = GetNextToken();
+			second_token = next_token;
 			if (next_token.tp != ID)
 				return (ParserInfo){idExpected, next_token};
 			// check if the first identifier is a class that has been parsed
@@ -1359,10 +1365,59 @@ ParserInfo operand()
 		next_token = PeekNextToken();
 		if (strcmp(next_token.lx, "(") == 0)
 		{
-			// check if subroutine is in scope
-			info = wrappedExpressionList();
-			if (info.er != none)
-				return info;
+
+			// we need to know how many arguments,
+			// info = wrappedExpressionList();
+			// if (info.er != none)
+			//	return info;
+			int argCount = 0;
+			// (
+			GetNextToken();
+			// check for ) skip extra recursion
+			next_token = PeekNextToken();
+			if (strcmp(next_token.lx, ")") == 0)
+			{
+				GetNextToken();
+			}
+			else
+			{
+				argCount++;
+				// expressionList
+				ParserInfo info = expression();
+				if (info.er != none)
+					return info;
+				// {, expression }
+				while (strcmp(PeekNextToken().lx, ",") == 0)
+				{
+					argCount++;
+					// eat the ","
+					GetNextToken();
+					// expression
+					ParserInfo info = expression();
+					if (info.er != none)
+						return info;
+				}
+				// )
+				next_token = GetNextToken();
+				if (strcmp(next_token.lx, ")") != 0)
+				{
+					return (ParserInfo){closeParenExpected, next_token};
+				}
+			}
+			// check if subroutine is in scope lol didnt do that
+			if (parsedOnce)
+			{
+				// you need to call a function.
+				if (!dotId)
+				{
+					ClassTable *table = (ClassTable *)getScopeClass();
+					fprintf(outputFile, "call %s.%s %d\n", table->name, first_token.lx, argCount);
+				}
+				else
+				{
+					fprintf(outputFile, "call %s.%s %d\n", first_token.lx, second_token.lx, argCount);
+				}
+			}
 		}
 		else if (strcmp(next_token.lx, "[") == 0)
 		{
