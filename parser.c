@@ -697,6 +697,8 @@ ParserInfo letStatement()
 	}
 	// identifier
 	next_token = GetNextToken();
+	char letTarget[128];
+	strcpy(letTarget, next_token.lx);
 	if (next_token.tp != ID)
 	{
 		return (ParserInfo){idExpected, next_token};
@@ -738,6 +740,36 @@ ParserInfo letStatement()
 	if (info.er != none)
 	{
 		return info;
+	}
+	// write the code to assign the current register value
+	// to the target
+	if (parsedOnce)
+	{
+		SubroutineTable *table = (SubroutineTable *)getScopeTop();
+		FILE *outputFile = getOutputFile();
+		int found = 0;
+		for (int i = 0; i < table->count; i++)
+		{
+
+			if (strcmp(table->entries[i]->name, letTarget) == 0)
+			{
+				int found = 1;
+				fprintf(outputFile, "pop local %d\n", table->entries[i]->kindIndex);
+				break;
+			}
+		}
+		if (!found)
+		{
+			ClassTable *table = (ClassTable *)getScopeClass();
+			for (int i = 0; i < table->count; i++)
+			{
+				if (strcmp(table->entries[i]->name, letTarget) == 0)
+				{
+					fprintf(outputFile, "pop this %d\n", table->entries[i]->kindIndex);
+					break;
+				}
+			}
+		}
 	}
 	// ;
 	next_token = GetNextToken();
@@ -1280,21 +1312,36 @@ ParserInfo operand()
 					return info;
 				// this does not check yet for class vars
 				// gonna need to implement that
-				/*
-				int varCount = 0;
 				SubroutineTable *table = (SubroutineTable *)getScopeTop();
+				int found = 0;
 				for (int i = 0; i < table->count; i++)
 				{
-					if (strcmp(table->entries[i]->kind, "var") == 0)
+					if (strcmp(table->entries[i]->name, first_token.lx) == 0)
 					{
-
-						if (strcmp(table->entries[i]->name, first_token.lx) == 0)
-							break;
-						varCount++;
+						int found = 1;
+						if (strcmp(table->entries[i]->kind, "var") == 0)
+						{
+							fprintf(outputFile, "push local %d\n", table->entries[i]->kindIndex);
+						}
+						else
+						{
+							fprintf(outputFile, "push %s %d\n", table->entries[i]->kind, table->entries[i]->kindIndex);
+						}
+						break;
 					}
 				}
-				fprintf(outputFile, "push local %d\n", varCount);
-				*/
+				if (!found)
+				{
+					ClassTable *table = (ClassTable *)getScopeClass();
+					for (int i = 0; i < table->count; i++)
+					{
+						if (strcmp(table->entries[i]->name, first_token.lx) == 0)
+						{
+							fprintf(outputFile, "push this %d\n", table->entries[i]->kindIndex);
+							break;
+						}
+					}
+				}
 			}
 		}
 		// [ [ expression ] | ( expressionList ) ] = [ expressionList ]
