@@ -465,6 +465,8 @@ ParserInfo subroutineDeclar()
 		}
 		FILE *outputFile = getOutputFile();
 		fprintf(outputFile, "function %s.%s %d\n", className, next_token.lx, varCount);
+		if (strcmp(kindString, "constructor") == 0)
+			fprintf(outputFile, "push constant 2\ncall Memory.alloc 1\npop pointer 0\n");
 	}
 	//  (
 	next_token = GetNextToken();
