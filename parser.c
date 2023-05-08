@@ -874,11 +874,12 @@ ParserInfo subroutineCall()
 	{
 		return (ParserInfo){idExpected, first_token};
 	}
-	strcat(outputBuffer, first_token.lx);
+
 	Token next_token = PeekNextToken();
 	// [ .identifier ]
 	if (strcmp(next_token.lx, ".") == 0)
 	{
+		strcat(outputBuffer, first_token.lx);
 		strcat(outputBuffer, ".");
 		// info = dotIdentifier();
 		// if (info.er != none)
@@ -925,6 +926,11 @@ ParserInfo subroutineCall()
 			info = isSubInScope(&first_token);
 			if (info.er != none)
 				return info;
+			// get the current class name to prepend the token
+			ClassTable *table = (ClassTable *)getScopeClass();
+			strcat(outputBuffer, table->name);
+			strcat(outputBuffer, ".");
+			strcat(outputBuffer, first_token.lx);
 		}
 	}
 	// ( expressionList )
