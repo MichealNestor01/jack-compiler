@@ -1320,13 +1320,9 @@ ParserInfo operand()
 					{
 						int found = 1;
 						if (strcmp(table->entries[i]->kind, "var") == 0)
-						{
 							fprintf(outputFile, "push local %d\n", table->entries[i]->kindIndex);
-						}
 						else
-						{
 							fprintf(outputFile, "push %s %d\n", table->entries[i]->kind, table->entries[i]->kindIndex);
-						}
 						break;
 					}
 				}
