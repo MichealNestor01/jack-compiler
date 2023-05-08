@@ -989,6 +989,8 @@ ParserInfo returnStatement()
 		if (info.er != none)
 			return info;
 	}
+	if (parsedOnce)
+		fprintf(outputFile, "return\n");
 	// ;
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, ";") != 0)
@@ -1235,7 +1237,11 @@ ParserInfo operand()
 			return InfoNoError;
 		// this
 		else if (strcmp(next_token.lx, "this") == 0)
+		{
+			if (parsedOnce)
+				fprintf(outputFile, "push pointer 0\n", next_token.lx);
 			return InfoNoError;
+		}
 		else
 			return (ParserInfo){syntaxError, next_token}; // check this is correct
 	}
