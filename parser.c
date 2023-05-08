@@ -927,6 +927,8 @@ ParserInfo subroutineCall()
 			if (info.er != none)
 				return info;
 			// get the current class name to prepend the token
+			FILE *outputFile = getOutputFile();
+			fprintf(outputFile, "push pointer 0\n");
 			ClassTable *table = (ClassTable *)getScopeClass();
 			strcat(outputBuffer, table->name);
 			strcat(outputBuffer, ".");
