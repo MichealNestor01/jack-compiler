@@ -794,13 +794,27 @@ ParserInfo ifStatement()
 	ParserInfo info = wrappedExpression();
 	if (info.er != none)
 		return info;
-	// { { statement } }
+
+	// MAKE GREATER THEN FUCKING WORK
+
+	// write the if statement code
+	FILE *outputFile = getOutputFile();
+	int parsedOnce = getProgramTable()->parsedOnce;
+	if (parsedOnce)
+	{
+		fprintf(outputFile, "if-goto IF_TRUE0\ngoto IF_FALSE0\nlabel IF_TRUE0\n");
+	}
+	//   { { statement } }
 	info = wrappedZeroOrMoreStatements();
 	if (info.er != none)
 	{
 		return info;
 	}
-	// [ else { { statement } } ]
+	if (parsedOnce)
+	{
+		fprintf(outputFile, "label IF_FALSE0\n");
+	}
+	//   [ else { { statement } } ]
 	next_token = PeekNextToken();
 	if (strcmp(next_token.lx, "else") == 0)
 	{
@@ -813,7 +827,10 @@ ParserInfo ifStatement()
 			return info;
 		}
 	}
-
+	if (parsedOnce)
+	{
+		fprintf(outputFile, "label IF_FALSE0\n");
+	}
 	return InfoNoError;
 }
 // whileStatement → while ( expression ) { { statement } }
@@ -1044,6 +1061,10 @@ ParserInfo relationalExpression()
 			strcmp(next_token.lx, "<") *
 			strcmp(next_token.lx, ">")) == 0)
 	{
+		char operator[128];
+		strcpy(operator, next_token.lx);
+		int parsedOnce = getProgramTable()->parsedOnce;
+		FILE *outputFile = getOutputFile();
 		// eat the token
 		GetNextToken();
 		// arithmeticExpression
@@ -1051,6 +1072,15 @@ ParserInfo relationalExpression()
 		if (info.er != none)
 			return info;
 		next_token = PeekNextToken();
+		if (parsedOnce)
+		{
+			if (strcmp(operator, "<") == 0)
+				fprintf(outputFile, "lt\n");
+			else if (strcmp(operator, ">") == 0)
+				fprintf(outputFile, "gt\n");
+			else if (strcmp(operator, "=") == 0)
+				fprintf(outputFile, "eq\n");
+		}
 	}
 	// no error encountered
 	return InfoNoError;
