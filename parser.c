@@ -467,7 +467,7 @@ ParserInfo subroutineDeclar()
 		fprintf(outputFile, "function %s.%s %d\n", className, next_token.lx, varCount);
 		if (strcmp(kindString, "constructor") == 0)
 			fprintf(outputFile, "push constant 2\ncall Memory.alloc 1\npop pointer 0\n");
-		else
+		else if (strcmp(kindString, "method") == 0)
 			fprintf(outputFile, "push argument 0\npop pointer 0\n");
 	}
 	//  (
