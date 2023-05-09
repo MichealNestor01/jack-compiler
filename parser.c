@@ -756,7 +756,10 @@ ParserInfo letStatement()
 			if (strcmp(table->entries[i]->name, letTarget) == 0)
 			{
 				int found = 1;
-				fprintf(outputFile, "pop local %d\n", table->entries[i]->kindIndex);
+				if (strcmp(table->entries[i]->kind, "argument") == 0)
+					fprintf(outputFile, "pop argument %d\n", table->entries[i]->kindIndex);
+				else
+					fprintf(outputFile, "pop local %d\n", table->entries[i]->kindIndex);
 				break;
 			}
 		}
@@ -838,15 +841,29 @@ ParserInfo whileStatement()
 	{
 		return (ParserInfo){syntaxError, next_token};
 	}
+	FILE *outputFile = getOutputFile();
+	int parsedOnce = getProgramTable()->parsedOnce;
+	if (parsedOnce)
+	{
+		fprintf(outputFile, "label WHILE_EXP0\n");
+	}
 	// ( expression )
 	ParserInfo info = wrappedExpression();
 	if (info.er != none)
 		return info;
+	if (parsedOnce)
+	{
+		fprintf(outputFile, "not\nif-goto WHILE_END0\n");
+	}
 	// { {statement} }
 	info = wrappedZeroOrMoreStatements();
 	if (info.er != none)
 	{
 		return info;
+	}
+	if (parsedOnce)
+	{
+		fprintf(outputFile, "goto WHILE_EXP0\nlabel WHILE_END0\n");
 	}
 	// successfully parsed
 	return InfoNoError;
@@ -1158,12 +1175,21 @@ ParserInfo factor()
 	if ((strcmp(next_token.lx, "-") *
 		 strcmp(next_token.lx, "~")) == 0)
 	{
+
 		// eat the token before checking the operand
 		GetNextToken();
 	}
 	// ϵ (no preceding token)
 	// operand
-	return operand();
+	ParserInfo info = operand();
+	FILE *outputFile = getOutputFile();
+	int parsedOnce = getProgramTable()->parsedOnce;
+	if (parsedOnce)
+	{
+		if (strcmp(next_token.lx, "~") == 0)
+			fprintf(outputFile, "not\n");
+	}
+	return info;
 }
 // dotIdentifier → .identifier
 ParserInfo dotIdentifier()
@@ -1259,7 +1285,7 @@ ParserInfo operand()
 			fprintf(outputFile, "push constant %d\ncall String.new 1\n", stringLength);
 			for (int i = 0; i < stringLength; i++)
 			{
-				fprintf(outputFile, "push constant %d\n call String.appendChar 2\n", next_token.lx[i]);
+				fprintf(outputFile, "push constant %d\ncall String.appendChar 2\n", next_token.lx[i]);
 			}
 		}
 		return InfoNoError;
