@@ -1252,7 +1252,18 @@ ParserInfo operand()
 	}
 	// stringLiteral
 	else if (next_token.tp == STRING)
+	{
+		if (parsedOnce)
+		{
+			int stringLength = strlen(next_token.lx);
+			fprintf(outputFile, "push constant %d\ncall String.new 1\n", stringLength);
+			for (int i = 0; i < stringLength; i++)
+			{
+				fprintf(outputFile, "push constant %d\n call String.appendChar 2\n", next_token.lx[i]);
+			}
+		}
 		return InfoNoError;
+	}
 	// true | false | null | this
 	else if (next_token.tp == RESWORD)
 	{
