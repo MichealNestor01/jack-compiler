@@ -827,10 +827,6 @@ ParserInfo ifStatement()
 			return info;
 		}
 	}
-	if (parsedOnce)
-	{
-		fprintf(outputFile, "label IF_FALSE0\n");
-	}
 	return InfoNoError;
 }
 // whileStatement → while ( expression ) { { statement } }
