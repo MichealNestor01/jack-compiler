@@ -1434,14 +1434,55 @@ ParserInfo operand()
 			if (parsedOnce)
 			{
 				// you need to call a function.
+				ClassTable *classTable = (ClassTable *)getScopeClass();
 				if (!dotId)
 				{
-					ClassTable *table = (ClassTable *)getScopeClass();
-					fprintf(outputFile, "call %s.%s %d\n", table->name, first_token.lx, argCount);
+					fprintf(outputFile, "call %s.%s %d\n", classTable->name, first_token.lx, argCount);
 				}
 				else
 				{
-					fprintf(outputFile, "call %s.%s %d\n", first_token.lx, second_token.lx, argCount);
+					int isClass = (unsigned long)getMatchingClass(&first_token);
+					if (!isClass)
+					{
+						char typeString[128];
+						char kindString[128];
+						int kindIndex;
+						int local = 0;
+						SubroutineTable *subTable = (SubroutineTable *)getScopeTop();
+						for (int i = 0; i < subTable->count; i++)
+						{
+							if (strcmp(subTable->entries[i]->name, first_token.lx) == 0)
+							{
+								strcpy(typeString, subTable->entries[i]->type);
+								strcpy(kindString, subTable->entries[i]->kind);
+								int kindIndex = subTable->entries[i]->kindIndex;
+								local = 1;
+								break;
+							}
+						}
+						if (!local)
+						{
+							for (int i = 0; i < classTable->count; i++)
+							{
+								if (strcmp(classTable->entries[i]->name, first_token.lx) == 0)
+								{
+									strcpy(typeString, classTable->entries[i]->type);
+									strcpy(kindString, classTable->entries[i]->kind);
+									int kindIndex = classTable->entries[i]->kindIndex;
+									break;
+								}
+							}
+						}
+						if (strcmp(kindString, "argument") == 0)
+						{
+							fprintf(outputFile, "push argument 1\n");
+						}
+						fprintf(outputFile, "call %s.%s 1\n", typeString, second_token.lx, argCount);
+					}
+					else
+					{
+						fprintf(outputFile, "call %s.%s %d\n", first_token.lx, second_token.lx, argCount);
+					}
 				}
 			}
 		}
