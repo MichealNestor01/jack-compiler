@@ -1441,17 +1441,21 @@ ParserInfo operand()
 		next_token = PeekNextToken();
 		if (strcmp(next_token.lx, "(") == 0)
 		{
-			// need to push the var that this functoin is called on
-			if (parsedOnce)
-			{
-			}
-			// we need to know how many arguments,
-			// info = wrappedExpressionList();
-			// if (info.er != none)
-			//	return info;
-			int argCount = 0;
 			// (
 			GetNextToken();
+			// we need to know how many arguments,
+			int argCount = 0;
+			int isClass = (unsigned long)getMatchingClass(&first_token);
+			if (!isClass && dotId && parsedOnce)
+			{
+				argCount++;
+				if (strcmp(first_token_kind, "argument") == 0)
+					fprintf(outputFile, "push argument 1\n");
+				else if (strcmp(first_token_kind, "var") == 0)
+					fprintf(outputFile, "push local %d\n", first_token_kindIndex);
+				else
+					fprintf(outputFile, "push this %d\n", first_token_kindIndex);
+			}
 			// check for ) skip extra recursion
 			next_token = PeekNextToken();
 			if (strcmp(next_token.lx, ")") == 0)
@@ -1460,6 +1464,7 @@ ParserInfo operand()
 			}
 			else
 			{
+				// parse function arguments
 				argCount++;
 				// expressionList
 				ParserInfo info = expression();
@@ -1483,7 +1488,7 @@ ParserInfo operand()
 					return (ParserInfo){closeParenExpected, next_token};
 				}
 			}
-			// check if subroutine is in scope lol didnt do that
+
 			if (parsedOnce)
 			{
 				// you need to call a function.
@@ -1494,23 +1499,10 @@ ParserInfo operand()
 				}
 				else
 				{
-					int isClass = (unsigned long)getMatchingClass(&first_token);
 					if (!isClass)
-					{
-						if (strcmp(first_token_kind, "argument") == 0)
-						{
-							fprintf(outputFile, "push argument 1\n");
-						}
-						else
-						{
-							// fprintf(outputFile, "push local %d\n", kindIndex);
-						}
-						fprintf(outputFile, "call %s.%s 1\n", first_token_type, second_token.lx, argCount);
-					}
+						fprintf(outputFile, "call %s.%s %d\n", first_token_type, second_token.lx, argCount);
 					else
-					{
 						fprintf(outputFile, "call %s.%s %d\n", first_token.lx, second_token.lx, argCount);
-					}
 				}
 			}
 		}
@@ -1587,10 +1579,10 @@ int StopParser()
 #ifndef TEST_PARSER
 int main()
 {
-	InitParser("./testfiles/NewLineInStr2.jack");
-	ParserInfo info = Parse();
-	printf("(%d,%s) near line %d\n", info.er, info.tk.lx, info.tk.ln);
-	printf("End\n");
-	return 1;
+InitParser("./testfiles/NewLineInStr2.jack");
+ParserInfo info = Parse();
+printf("(%d,%s) near line %d\n", info.er, info.tk.lx, info.tk.ln);
+printf("End\n");
+return 1;
 }
 #endif*/
