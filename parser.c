@@ -900,6 +900,7 @@ ParserInfo subroutineCall()
 {
 	ParserInfo info;
 	int parsedOnce = getProgramTable()->parsedOnce;
+	int argCount = 0;
 	// identifier
 	Token first_token = GetNextToken();
 	if (first_token.tp != ID)
@@ -957,7 +958,9 @@ ParserInfo subroutineCall()
 					if (strcmp(first_token_kind, "var") == 0)
 						fprintf(outputFile, "push local %d\n", first_token_kindIndex);
 					else
+					{
 						fprintf(outputFile, "push %s %d\n", first_token_kind, first_token_kindIndex);
+					}
 				}
 				else
 				{
@@ -981,6 +984,8 @@ ParserInfo subroutineCall()
 		if (next_token.tp != ID)
 			return (ParserInfo){idExpected, next_token};
 		strcat(outputBuffer, next_token.lx);
+		if (strcmp(next_token.lx, "print") == 0)
+			argCount++;
 		// first check if the first idenfifier exists in scope
 		//
 		// check if the first identifier is a class that has been parsed
@@ -1008,6 +1013,7 @@ ParserInfo subroutineCall()
 	}
 	else
 	{
+		argCount++;
 		// check if subroutine is in scope
 		if (parsedOnce)
 		{
@@ -1023,7 +1029,7 @@ ParserInfo subroutineCall()
 			strcat(outputBuffer, first_token.lx);
 		}
 	}
-	int argCount = 0;
+
 	// ( expressionList )
 	// (
 	next_token = GetNextToken();
@@ -1065,6 +1071,7 @@ ParserInfo subroutineCall()
 	char count[3] = " 0\0";
 	count[1] += argCount;
 	strcat(outputBuffer, count);
+	// printf("Calling %s\n", outputBuffer);
 	return InfoNoError;
 }
 // expressoinList → expression {, expression }|ϵ
