@@ -911,7 +911,63 @@ ParserInfo subroutineCall()
 	// [ .identifier ]
 	if (strcmp(next_token.lx, ".") == 0)
 	{
-		strcat(outputBuffer, first_token.lx);
+		int isClass = (unsigned long)getMatchingClass(&first_token);
+		if (isClass)
+		{
+			strcat(outputBuffer, first_token.lx);
+		}
+		else
+		{
+			// push object var
+			if (parsedOnce)
+			{
+				FILE *outputFile = getOutputFile();
+				char first_token_type[128];
+				char first_token_kind[128];
+				int first_token_kindIndex;
+				int first_token_local = 0;
+				ClassTable *classTable = (ClassTable *)getScopeClass();
+				SubroutineTable *subTable = (SubroutineTable *)getScopeTop();
+				for (int i = 0; i < subTable->count; i++)
+				{
+					if (strcmp(subTable->entries[i]->name, first_token.lx) == 0)
+					{
+						strcpy(first_token_type, subTable->entries[i]->type);
+						strcpy(first_token_kind, subTable->entries[i]->kind);
+						first_token_kindIndex = subTable->entries[i]->kindIndex;
+						first_token_local = 1;
+						break;
+					}
+				}
+				if (!first_token_local)
+				{
+					for (int i = 0; i < classTable->count; i++)
+					{
+						if (strcmp(classTable->entries[i]->name, first_token.lx) == 0)
+						{
+							strcpy(first_token_type, classTable->entries[i]->type);
+							strcpy(first_token_kind, classTable->entries[i]->kind);
+							first_token_kindIndex = classTable->entries[i]->kindIndex;
+							break;
+						}
+					}
+				}
+				if (first_token_local)
+				{
+					if (strcmp(first_token_kind, "var") == 0)
+						fprintf(outputFile, "push local %d\n", first_token_kindIndex);
+					else
+						fprintf(outputFile, "push %s %d\n", first_token_kind, first_token_kindIndex);
+				}
+				else
+				{
+					fprintf(outputFile, "push this %d\n", first_token_kindIndex);
+				}
+				// then cat class name
+				strcat(outputBuffer, first_token_type);
+			}
+		}
+
 		strcat(outputBuffer, ".");
 		// info = dotIdentifier();
 		// if (info.er != none)
@@ -1336,7 +1392,6 @@ ParserInfo operand()
 	// identifier [ .identifier ][ [expression] | ( expressionList ) ]
 	else if (next_token.tp == ID)
 	{
-
 		Token first_token = next_token;
 		char first_token_type[128];
 		char first_token_kind[128];
