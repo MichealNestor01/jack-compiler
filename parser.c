@@ -1338,6 +1338,36 @@ ParserInfo operand()
 	{
 
 		Token first_token = next_token;
+		char first_token_type[128];
+		char first_token_kind[128];
+		int first_token_kindIndex;
+		int first_token_local = 0;
+		ClassTable *classTable = (ClassTable *)getScopeClass();
+		SubroutineTable *subTable = (SubroutineTable *)getScopeTop();
+		for (int i = 0; i < subTable->count; i++)
+		{
+			if (strcmp(subTable->entries[i]->name, first_token.lx) == 0)
+			{
+				strcpy(first_token_type, subTable->entries[i]->type);
+				strcpy(first_token_kind, subTable->entries[i]->kind);
+				first_token_kindIndex = subTable->entries[i]->kindIndex;
+				first_token_local = 1;
+				break;
+			}
+		}
+		if (!first_token_local)
+		{
+			for (int i = 0; i < classTable->count; i++)
+			{
+				if (strcmp(classTable->entries[i]->name, first_token.lx) == 0)
+				{
+					strcpy(first_token_type, classTable->entries[i]->type);
+					strcpy(first_token_kind, classTable->entries[i]->kind);
+					first_token_kindIndex = classTable->entries[i]->kindIndex;
+					break;
+				}
+			}
+		}
 		Token second_token;
 
 		// check if the identifier exists
@@ -1387,39 +1417,22 @@ ParserInfo operand()
 		}
 		else
 		{
+			// check if the given identifier is
+			info = isVarInScope(&first_token);
+			if (info.er != none)
+				return info;
 			if (parsedOnce)
 			{
-				// check if the given identifier is
-				info = isVarInScope(&first_token);
-				if (info.er != none)
-					return info;
-				// this does not check yet for class vars
-				// gonna need to implement that
-				SubroutineTable *table = (SubroutineTable *)getScopeTop();
-				int found = 0;
-				for (int i = 0; i < table->count; i++)
+				if (first_token_local)
 				{
-					if (strcmp(table->entries[i]->name, first_token.lx) == 0)
-					{
-						int found = 1;
-						if (strcmp(table->entries[i]->kind, "var") == 0)
-							fprintf(outputFile, "push local %d\n", table->entries[i]->kindIndex);
-						else
-							fprintf(outputFile, "push %s %d\n", table->entries[i]->kind, table->entries[i]->kindIndex);
-						break;
-					}
+					if (strcmp(first_token_kind, "var") == 0)
+						fprintf(outputFile, "push local %d\n", first_token_kindIndex);
+					else
+						fprintf(outputFile, "push %s %d\n", first_token_kind, first_token_kindIndex);
 				}
-				if (!found)
+				else
 				{
-					ClassTable *table = (ClassTable *)getScopeClass();
-					for (int i = 0; i < table->count; i++)
-					{
-						if (strcmp(table->entries[i]->name, first_token.lx) == 0)
-						{
-							fprintf(outputFile, "push this %d\n", table->entries[i]->kindIndex);
-							break;
-						}
-					}
+					fprintf(outputFile, "push this %d\n", first_token_kindIndex);
 				}
 			}
 		}
@@ -1428,7 +1441,10 @@ ParserInfo operand()
 		next_token = PeekNextToken();
 		if (strcmp(next_token.lx, "(") == 0)
 		{
-
+			// need to push the var that this functoin is called on
+			if (parsedOnce)
+			{
+			}
 			// we need to know how many arguments,
 			// info = wrappedExpressionList();
 			// if (info.er != none)
@@ -1481,40 +1497,15 @@ ParserInfo operand()
 					int isClass = (unsigned long)getMatchingClass(&first_token);
 					if (!isClass)
 					{
-						char typeString[128];
-						char kindString[128];
-						int kindIndex;
-						int local = 0;
-						SubroutineTable *subTable = (SubroutineTable *)getScopeTop();
-						for (int i = 0; i < subTable->count; i++)
-						{
-							if (strcmp(subTable->entries[i]->name, first_token.lx) == 0)
-							{
-								strcpy(typeString, subTable->entries[i]->type);
-								strcpy(kindString, subTable->entries[i]->kind);
-								int kindIndex = subTable->entries[i]->kindIndex;
-								local = 1;
-								break;
-							}
-						}
-						if (!local)
-						{
-							for (int i = 0; i < classTable->count; i++)
-							{
-								if (strcmp(classTable->entries[i]->name, first_token.lx) == 0)
-								{
-									strcpy(typeString, classTable->entries[i]->type);
-									strcpy(kindString, classTable->entries[i]->kind);
-									int kindIndex = classTable->entries[i]->kindIndex;
-									break;
-								}
-							}
-						}
-						if (strcmp(kindString, "argument") == 0)
+						if (strcmp(first_token_kind, "argument") == 0)
 						{
 							fprintf(outputFile, "push argument 1\n");
 						}
-						fprintf(outputFile, "call %s.%s 1\n", typeString, second_token.lx, argCount);
+						else
+						{
+							// fprintf(outputFile, "push local %d\n", kindIndex);
+						}
+						fprintf(outputFile, "call %s.%s 1\n", first_token_type, second_token.lx, argCount);
 					}
 					else
 					{
