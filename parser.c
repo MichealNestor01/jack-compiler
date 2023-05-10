@@ -885,7 +885,7 @@ ParserInfo doStatement()
 	if (info.er != none)
 		return info;
 	if (parsedOnce)
-		fprintf(outputFile, "%s 1\npop temp 0\n", outputBuffer);
+		fprintf(outputFile, "%s\npop temp 0\n", outputBuffer);
 	// ;
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, ";") != 0)
@@ -1023,8 +1023,49 @@ ParserInfo subroutineCall()
 			strcat(outputBuffer, first_token.lx);
 		}
 	}
+	int argCount = 0;
 	// ( expressionList )
-	return wrappedExpressionList();
+	// (
+	next_token = GetNextToken();
+	if (strcmp(next_token.lx, "(") != 0)
+	{
+		return (ParserInfo){openParenExpected, next_token};
+	}
+	// check for ) skip extra recursion
+	next_token = PeekNextToken();
+	if (strcmp(next_token.lx, ")") == 0)
+	{
+		GetNextToken();
+	}
+	else
+	{
+		argCount++;
+		// expressionList
+		info = expression();
+		if (info.er != none)
+			return info;
+		// {, expression }
+		while (strcmp(PeekNextToken().lx, ",") == 0)
+		{
+			argCount++;
+			// eat the ","
+			GetNextToken();
+			// expression
+			info = expression();
+			if (info.er != none)
+				return info;
+		}
+		// )
+		next_token = GetNextToken();
+		if (strcmp(next_token.lx, ")") != 0)
+		{
+			return (ParserInfo){closeParenExpected, next_token};
+		}
+	}
+	char count[3] = " 0\0";
+	count[1] += argCount;
+	strcat(outputBuffer, count);
+	return InfoNoError;
 }
 // expressoinList → expression {, expression }|ϵ
 ParserInfo expressionList()
