@@ -1544,7 +1544,11 @@ ParserInfo operand()
 		}
 		// null
 		else if (strcmp(next_token.lx, "null") == 0)
+		{
+			if (parsedOnce)
+				fprintf(outputFile, "push constant 0\n");
 			return InfoNoError;
+		}
 		// this
 		else if (strcmp(next_token.lx, "this") == 0)
 		{
