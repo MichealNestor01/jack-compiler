@@ -565,6 +565,7 @@ ParserInfo subroutineDeclar()
 		}
 		if (strcmp(kindString, "constructor") == 0)
 		{ // class fields are arguments to the constructor
+			argCount = 0;
 			ClassTable *classTable = (ClassTable *)getScopeClass();
 			for (int i = 0; i < classTable->count; i++)
 			{
