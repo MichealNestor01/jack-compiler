@@ -17,6 +17,10 @@ void error(char *s)
 // output buffer
 char outputBuffer[128];
 
+// if and while counters
+int ifCount;
+int whileCount;
+
 // no error parser info
 ParserInfo InfoNoError;
 
@@ -414,6 +418,8 @@ ParserInfo type()
 // subroutineDeclar→( constructor|funtoin|method)( type | void ) identifier( paramList ) subroutineBody
 ParserInfo subroutineDeclar()
 {
+	ifCount = 0;
+	whileCount = 0;
 	ParserInfo info;
 	char *kindString = PeekNextToken().lx;
 	int parsedOnce = getProgramTable()->parsedOnce;
@@ -871,6 +877,8 @@ ParserInfo letStatement()
 // ifStatement→if ( expression ) { { statement } } [ else { { statement } } ]
 ParserInfo ifStatement()
 {
+	int localIfCount = ifCount;
+	ifCount++;
 	// if
 	Token next_token = GetNextToken();
 	if (strcmp(next_token.lx, "if") != 0)
@@ -889,7 +897,7 @@ ParserInfo ifStatement()
 	int parsedOnce = getProgramTable()->parsedOnce;
 	if (parsedOnce)
 	{
-		fprintf(outputFile, "if-goto IF_TRUE0\ngoto IF_FALSE0\nlabel IF_TRUE0\n");
+		fprintf(outputFile, "if-goto IF_TRUE%d\ngoto IF_FALSE%d\nlabel IF_TRUE%d\n", localIfCount, localIfCount, localIfCount);
 	}
 	//   { { statement } }
 	info = wrappedZeroOrMoreStatements();
@@ -899,7 +907,7 @@ ParserInfo ifStatement()
 	}
 	if (parsedOnce)
 	{
-		fprintf(outputFile, "label IF_FALSE0\n");
+		fprintf(outputFile, "label IF_FALSE%d\n", localIfCount);
 	}
 	//   [ else { { statement } } ]
 	next_token = PeekNextToken();
@@ -919,6 +927,8 @@ ParserInfo ifStatement()
 // whileStatement → while ( expression ) { { statement } }
 ParserInfo whileStatement()
 {
+	int localWhileCount = whileCount;
+	whileCount++;
 	// while
 	Token next_token = GetNextToken();
 	if (strcmp(next_token.lx, "while") != 0)
@@ -929,7 +939,7 @@ ParserInfo whileStatement()
 	int parsedOnce = getProgramTable()->parsedOnce;
 	if (parsedOnce)
 	{
-		fprintf(outputFile, "label WHILE_EXP0\n");
+		fprintf(outputFile, "label WHILE_EXP%d\n", localWhileCount);
 	}
 	// ( expression )
 	ParserInfo info = wrappedExpression();
@@ -937,7 +947,7 @@ ParserInfo whileStatement()
 		return info;
 	if (parsedOnce)
 	{
-		fprintf(outputFile, "not\nif-goto WHILE_END0\n");
+		fprintf(outputFile, "not\nif-goto WHILE_END%d\n", localWhileCount);
 	}
 	// { {statement} }
 	info = wrappedZeroOrMoreStatements();
@@ -947,7 +957,7 @@ ParserInfo whileStatement()
 	}
 	if (parsedOnce)
 	{
-		fprintf(outputFile, "goto WHILE_EXP0\nlabel WHILE_END0\n");
+		fprintf(outputFile, "goto WHILE_EXP%d\nlabel WHILE_END%d\n", localWhileCount, localWhileCount);
 	}
 	// successfully parsed
 	return InfoNoError;
