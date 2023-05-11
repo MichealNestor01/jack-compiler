@@ -442,6 +442,7 @@ ParserInfo subroutineDeclar()
 	}
 	//  identifier
 	next_token = GetNextToken();
+	Token first_token = next_token;
 	if (next_token.tp != ID)
 		return (ParserInfo){idExpected, next_token};
 	// only add identifiers in the first parse
@@ -453,6 +454,7 @@ ParserInfo subroutineDeclar()
 	}
 	else
 	{
+		/*
 		char *className = ((ClassTable *)getScopeTop())->name;
 		pushSubToScope(&next_token);
 		// write "function class.subName varCount" to the output file
@@ -468,7 +470,7 @@ ParserInfo subroutineDeclar()
 		if (strcmp(kindString, "constructor") == 0)
 			fprintf(outputFile, "push constant 2\ncall Memory.alloc 1\npop pointer 0\n");
 		else if (strcmp(kindString, "method") == 0)
-			fprintf(outputFile, "push argument 0\npop pointer 0\n");
+			fprintf(outputFile, "push argument 0\npop pointer 0\n");*/
 	}
 	//  (
 	next_token = GetNextToken();
@@ -476,18 +478,91 @@ ParserInfo subroutineDeclar()
 		return (ParserInfo){openParenExpected, next_token};
 	//  check for closed brackets before checking param list
 	next_token = PeekNextToken();
+	int argCount = 0;
 	if (strcmp(next_token.lx, ")") != 0)
 	{
 		// paramList
-		info = paramList();
-		if (info.er != none)
-			return info;
+		argCount++;
+		parsedOnce = getProgramTable()->parsedOnce;
+		next_token = PeekNextToken();
+		if (next_token.tp == ID ||
+			(strcmp(next_token.lx, "int") *
+			 strcmp(next_token.lx, "char") *
+			 strcmp(next_token.lx, "boolean")) == 0)
+		{
+			char *typeString = PeekNextToken().lx;
+			// type
+			ParserInfo info = type();
+			if (info.er != none)
+			{
+				return info;
+			}
+			//  indentifier
+			next_token = GetNextToken();
+			if (next_token.tp != ID)
+			{
+				return (ParserInfo){idExpected, next_token};
+			}
+			// only add identifiers in the first parse
+			if (parsedOnce == 0)
+			{
+				info = addTokenToSubroutineTable(&next_token, typeString, "argument");
+				if (info.er != none)
+					return info;
+			}
+			//  {, type identifier }
+			while (strcmp(PeekNextToken().lx, ",") == 0)
+			{
+				argCount++;
+				//  eat the ,
+				GetNextToken();
+				char *typeString = PeekNextToken().lx;
+				// type
+				ParserInfo info = type();
+				if (info.er != none)
+				{
+					return info;
+				}
+				//  identifier
+				Token next_token = GetNextToken();
+				if (next_token.tp != ID)
+				{
+					return (ParserInfo){idExpected, next_token};
+				}
+				// only add identifiers in the first parse
+				if (parsedOnce == 0)
+				{
+					info = addTokenToSubroutineTable(&next_token, typeString, "argument");
+					if (info.er != none)
+						return info;
+				}
+			}
+		}
 	}
 	// )
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, ")") != 0)
 	{
 		return (ParserInfo){closeParenExpected, next_token};
+	}
+	if (parsedOnce)
+	{
+		char *className = ((ClassTable *)getScopeTop())->name;
+		pushSubToScope(&first_token);
+		// write "function class.subName varCount" to the output file
+		int varCount = 0;
+		SubroutineTable *table = (SubroutineTable *)getScopeTop();
+		for (int i = 0; i < table->count; i++)
+		{
+			if (strcmp(table->entries[i]->kind, "var") == 0)
+				varCount++;
+		}
+		FILE *outputFile = getOutputFile();
+		fprintf(outputFile, "function %s.%s %d\n", className, first_token.lx, varCount);
+		if (strcmp(kindString, "constructor") == 0)
+			fprintf(outputFile, "push constant %d\ncall Memory.alloc 1\npop pointer 0\n", argCount);
+		else if (strcmp(kindString, "method") == 0)
+			fprintf(outputFile, "push argument 0\npop pointer 0\n");
 	}
 	// subroutineBody
 	info = subroutineBody();
@@ -956,7 +1031,10 @@ ParserInfo subroutineCall()
 				if (first_token_local)
 				{
 					if (strcmp(first_token_kind, "var") == 0)
+					{
+						argCount++;
 						fprintf(outputFile, "push local %d\n", first_token_kindIndex);
+					}
 					else
 					{
 						fprintf(outputFile, "push %s %d\n", first_token_kind, first_token_kindIndex);
@@ -984,12 +1062,12 @@ ParserInfo subroutineCall()
 		if (next_token.tp != ID)
 			return (ParserInfo){idExpected, next_token};
 		strcat(outputBuffer, next_token.lx);
-		if (strcmp(next_token.lx, "print") == 0)
-			argCount++;
-		// first check if the first idenfifier exists in scope
+		// if (strcmp(next_token.lx, "print") == 0)
+		//	argCount++;
+		//  first check if the first idenfifier exists in scope
 		//
-		// check if the first identifier is a class that has been parsed
-		// and then check if the current identifier exists in that scope
+		//  check if the first identifier is a class that has been parsed
+		//  and then check if the current identifier exists in that scope
 		if (parsedOnce)
 		{
 			info = isVarInScope(&first_token);
