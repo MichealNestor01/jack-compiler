@@ -557,6 +557,15 @@ ParserInfo subroutineDeclar()
 			if (strcmp(table->entries[i]->kind, "var") == 0)
 				varCount++;
 		}
+		if (strcmp(kindString, "constructor") == 0)
+		{ // class fields are arguments to the constructor
+			ClassTable *classTable = (ClassTable *)getScopeClass();
+			for (int i = 0; i < classTable->count; i++)
+			{
+				if (strcmp(classTable->entries[i]->kind, "field") == 0)
+					argCount++;
+			}
+		}
 		FILE *outputFile = getOutputFile();
 		fprintf(outputFile, "function %s.%s %d\n", className, first_token.lx, varCount);
 		if (strcmp(kindString, "constructor") == 0)
@@ -1042,6 +1051,7 @@ ParserInfo subroutineCall()
 				}
 				else
 				{
+					argCount++;
 					fprintf(outputFile, "push this %d\n", first_token_kindIndex);
 				}
 				// then cat class name
