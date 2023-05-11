@@ -193,6 +193,20 @@ void addToSubroutineTable(SubroutineTable *table, SubroutineTableEntry *entry)
 {
     // work out entry's kind number
     int kindIndex = 0;
+    // if the subroutine is a method then we need to add 1 to the kind index of arguments.
+    if (strcmp(entry->kind, "argument") == 0)
+    {
+        ClassTable *classTable = (ClassTable *)getScopeClass();
+        for (int i = 0; i < classTable->count; i++)
+        {
+            if (classTable->entries[i]->table == table)
+            {
+                if (strcmp(classTable->entries[i]->kind, "method") == 0)
+                    kindIndex = 1;
+                break;
+            }
+        }
+    }
     for (int index = 0; index < table->count; index++)
     {
         if (strcmp(table->entries[index]->kind, entry->kind) == 0)

@@ -497,26 +497,6 @@ ParserInfo subroutineDeclar()
 		if (info.er != none)
 			return info;
 	}
-	else
-	{
-		/*
-		char *className = ((ClassTable *)getScopeTop())->name;
-		pushSubToScope(&next_token);
-		// write "function class.subName varCount" to the output file
-		int varCount = 0;
-		SubroutineTable *table = (SubroutineTable *)getScopeTop();
-		for (int i = 0; i < table->count; i++)
-		{
-			if (strcmp(table->entries[i]->kind, "var") == 0)
-				varCount++;
-		}
-		FILE *outputFile = getOutputFile();
-		fprintf(outputFile, "function %s.%s %d\n", className, next_token.lx, varCount);
-		if (strcmp(kindString, "constructor") == 0)
-			fprintf(outputFile, "push constant 2\ncall Memory.alloc 1\npop pointer 0\n");
-		else if (strcmp(kindString, "method") == 0)
-			fprintf(outputFile, "push argument 0\npop pointer 0\n");*/
-	}
 	//  (
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, "(") != 0)
