@@ -20,6 +20,7 @@ char outputBuffer[128];
 // if and while counters
 int ifCount;
 int whileCount;
+int rhsIsFunction;
 
 // no error parser info
 ParserInfo InfoNoError;
@@ -843,9 +844,11 @@ ParserInfo letStatement()
 			return info;
 	}
 	// [ [identifier] ]
+	int isIndexed = 0;
 	next_token = PeekNextToken();
 	if (strcmp(next_token.lx, "[") == 0)
 	{
+		isIndexed = 1;
 		// eat the "["
 		GetNextToken();
 		// expression
@@ -878,6 +881,7 @@ ParserInfo letStatement()
 	{
 		return (ParserInfo){equalExpected, next_token};
 	}
+	rhsIsFunction = 0;
 	// expression
 	info = expression();
 	if (info.er != none)
@@ -888,33 +892,27 @@ ParserInfo letStatement()
 	// to the target
 	if (parsedOnce)
 	{
-		SubroutineTable *table = (SubroutineTable *)getScopeTop();
 		FILE *outputFile = getOutputFile();
 		int found = 0;
-		for (int i = 0; i < table->count; i++)
+		if (firstTokenContext->isLocal)
 		{
-
-			if (strcmp(table->entries[i]->name, letTarget) == 0)
+			if (strcmp(firstTokenContext->kind, "argument") == 0)
+				fprintf(outputFile, "pop argument %d\n", firstTokenContext->kindIndex);
+			else
 			{
-				int found = 1;
-				if (strcmp(table->entries[i]->kind, "argument") == 0)
-					fprintf(outputFile, "pop argument %d\n", table->entries[i]->kindIndex);
-				else
-					fprintf(outputFile, "pop local %d\n", table->entries[i]->kindIndex);
-				break;
-			}
-		}
-		if (!found)
-		{
-			ClassTable *table = (ClassTable *)getScopeClass();
-			for (int i = 0; i < table->count; i++)
-			{
-				if (strcmp(table->entries[i]->name, letTarget) == 0)
+				if (strcmp(firstTokenContext->type, "Array") == 0 && rhsIsFunction && isIndexed)
 				{
-					fprintf(outputFile, "pop this %d\n", table->entries[i]->kindIndex);
-					break;
+					fprintf(outputFile, "pop temp 0\npop pointer 1\npush temp 0\npop that 0\n");
+				}
+				else
+				{
+					fprintf(outputFile, "pop local %d\n", firstTokenContext->kindIndex);
 				}
 			}
+		}
+		else
+		{
+			fprintf(outputFile, "pop this %d\n", firstTokenContext->kindIndex);
 		}
 	}
 	// ;
@@ -1633,26 +1631,13 @@ ParserInfo operand()
 			info = isVarInScope(&first_token);
 			if (info.er != none)
 				return info;
-			if (parsedOnce)
-			{
-				if (firstTokenContext->isLocal)
-				{
-					if (strcmp(firstTokenContext->kind, "var") == 0)
-						fprintf(outputFile, "push local %d\n", firstTokenContext->kindIndex);
-					else
-						fprintf(outputFile, "push %s %d\n", firstTokenContext->kind, firstTokenContext->kindIndex);
-				}
-				else
-				{
-					fprintf(outputFile, "push this %d\n", firstTokenContext->kindIndex);
-				}
-			}
 		}
 		// [ [ expression ] | ( expressionList ) ] = [ expressionList ]
 		// means 0 or 1 of [expression] or (expressionList)
 		next_token = PeekNextToken();
 		if (strcmp(next_token.lx, "(") == 0)
 		{
+			rhsIsFunction = 1;
 			// (
 			GetNextToken();
 			// we need to know how many arguments,
@@ -1664,7 +1649,9 @@ ParserInfo operand()
 				if (strcmp(firstTokenContext->kind, "argument") == 0)
 					fprintf(outputFile, "push argument 1\n");
 				else if (strcmp(firstTokenContext->kind, "var") == 0)
+				{
 					fprintf(outputFile, "push local %d\n", firstTokenContext->kindIndex);
+				}
 				else
 					fprintf(outputFile, "push this %d\n", firstTokenContext->kindIndex);
 			}
@@ -1720,6 +1707,7 @@ ParserInfo operand()
 		}
 		else if (strcmp(next_token.lx, "[") == 0)
 		{
+			rhsIsFunction = 1;
 			// [expression]
 			// eat the [
 			GetNextToken();
@@ -1736,9 +1724,27 @@ ParserInfo operand()
 			if (parsedOnce)
 			{
 				if (firstTokenContext->isLocal)
-					fprintf(outputFile, "push local %d\nadd\n", firstTokenContext->kindIndex);
+					fprintf(outputFile, "push local %d\nadd\npop pointer 1\npush that 0\n", firstTokenContext->kindIndex);
 				else
 					fprintf(outputFile, "push this %d\nadd\n", firstTokenContext->kindIndex);
+			}
+		}
+		else
+		{
+			// single identifier
+			if (parsedOnce)
+			{
+				if (firstTokenContext->isLocal)
+				{
+					if (strcmp(firstTokenContext->kind, "var") == 0)
+						fprintf(outputFile, "push local %d\n", firstTokenContext->kindIndex);
+					else
+						fprintf(outputFile, "push %s %d\n", firstTokenContext->kind, firstTokenContext->kindIndex);
+				}
+				else
+				{
+					fprintf(outputFile, "push this %d\n", firstTokenContext->kindIndex);
+				}
 			}
 		}
 	}
