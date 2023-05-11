@@ -901,7 +901,7 @@ ParserInfo letStatement()
 				fprintf(outputFile, "pop argument %d\n", firstTokenContext->kindIndex);
 			else
 			{
-				if (strcmp(firstTokenContext->type, "Array") == 0 && rhsIsFunction && isIndexed)
+				if (strcmp(firstTokenContext->type, "Array") == 0 && isIndexed)
 				{
 					fprintf(outputFile, "pop temp 0\npop pointer 1\npush temp 0\npop that 0\n");
 				}
