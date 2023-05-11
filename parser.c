@@ -1221,6 +1221,8 @@ ParserInfo returnStatement()
 ParserInfo expression()
 {
 	// relationalExpression
+	FILE *outputFile = getOutputFile();
+	int parsedOnce = getProgramTable()->parsedOnce;
 	ParserInfo info = relationalExpression();
 	if (info.er != none)
 	{
@@ -1228,6 +1230,8 @@ ParserInfo expression()
 	}
 	// {( & | | ) relationalExpression }
 	Token next_token = PeekNextToken();
+	char opp[128];
+	strcpy(opp, next_token.lx);
 	while ((strcmp(next_token.lx, "&") *
 			strcmp(next_token.lx, "|")) == 0)
 	{
@@ -1238,9 +1242,15 @@ ParserInfo expression()
 		if (info.er != none)
 			return info;
 		next_token = PeekNextToken();
+		if (parsedOnce)
+		{
+			if (strcmp(opp, "&") == 0)
+				fprintf(outputFile, "and\n");
+			if (strcmp(opp, "|") == 0)
+				fprintf(outputFile, "or\n");
+		}
 	}
 	// no error encountered
-
 	return InfoNoError;
 }
 // relationalExpression→ arithmeticExpression {( = | > | < ) arithmeticExpression }
@@ -1370,6 +1380,8 @@ ParserInfo factor()
 	{
 		if (strcmp(next_token.lx, "~") == 0)
 			fprintf(outputFile, "not\n");
+		if (strcmp(next_token.lx, "-") == 0)
+			fprintf(outputFile, "neg\n");
 	}
 	return info;
 }
@@ -1477,10 +1489,18 @@ ParserInfo operand()
 	{
 		// true
 		if (strcmp(next_token.lx, "true") == 0)
+		{
+			if (parsedOnce)
+				fprintf(outputFile, "push constant 0\nnot\n");
 			return InfoNoError;
+		}
 		// false
 		else if (strcmp(next_token.lx, "false") == 0)
+		{
+			if (parsedOnce)
+				fprintf(outputFile, "push constant 0\n");
 			return InfoNoError;
+		}
 		// null
 		else if (strcmp(next_token.lx, "null") == 0)
 			return InfoNoError;
