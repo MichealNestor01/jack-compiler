@@ -944,23 +944,20 @@ ParserInfo ifStatement()
 	FILE *outputFile = getOutputFile();
 	int parsedOnce = getProgramTable()->parsedOnce;
 	if (parsedOnce)
-	{
 		fprintf(outputFile, "if-goto IF_TRUE%d\ngoto IF_FALSE%d\nlabel IF_TRUE%d\n", localIfCount, localIfCount, localIfCount);
-	}
 	//   { { statement } }
 	info = wrappedZeroOrMoreStatements();
 	if (info.er != none)
 	{
 		return info;
 	}
-	if (parsedOnce)
-	{
-		fprintf(outputFile, "label IF_FALSE%d\n", localIfCount);
-	}
+
 	//   [ else { { statement } } ]
 	next_token = PeekNextToken();
 	if (strcmp(next_token.lx, "else") == 0)
 	{
+		if (parsedOnce)
+			fprintf(outputFile, "goto IF_END%d\nlabel IF_FALSE%d\n", localIfCount, localIfCount);
 		// eat else
 		GetNextToken();
 		// { { statement } }
@@ -969,6 +966,13 @@ ParserInfo ifStatement()
 		{
 			return info;
 		}
+		if (parsedOnce)
+			fprintf(outputFile, "label IF_END%d\n", localIfCount);
+	}
+	else
+	{
+		if (parsedOnce)
+			fprintf(outputFile, "label IF_FALSE%d\n", localIfCount);
 	}
 	return InfoNoError;
 }
