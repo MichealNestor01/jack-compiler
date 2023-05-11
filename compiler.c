@@ -18,6 +18,7 @@ Date Work Commenced:
 #include <stdio.h>
 #include <string.h>
 #include <sys/syscall.h>
+#include <stdlib.h>
 #include "compiler.h"
 
 FILE *getOutputFile()
@@ -141,6 +142,31 @@ ParserInfo compile(char *dir_name)
 
 int StopCompiler()
 {
+	// free memory
+	ProgramTable *programTable = getProgramTable();
+	for (int cIndex = 0; cIndex < programTable->count; cIndex++)
+	{
+		ProgramTableEntry *classEntry = programTable->entries[cIndex];
+		ClassTable *classTable = classEntry->table;
+		for (int sIndex = 0; sIndex < classTable->count; sIndex++)
+		{
+			ClassTableEntry *subEntry = classTable->entries[sIndex];
+			SubroutineTable *subTable = subEntry->table;
+			if (subTable != NULL)
+			{
+				for (int tIndex = 0; tIndex < subTable->count; tIndex++)
+					free(subTable->entries[tIndex]);
+				free(subTable->entries);
+				free(subTable);
+			}
+			free(subEntry);
+		}
+		free(classTable->entries);
+		free(classTable);
+		free(classEntry);
+	}
+	free(programTable->entries);
+	freeScopeStack();
 	return 1;
 }
 
@@ -148,7 +174,7 @@ int StopCompiler()
 int main()
 {
 	InitCompiler();
-	ParserInfo p = compile("Seven");
+	ParserInfo p = compile("Average");
 	// PrintError(p);
 	StopCompiler();
 	return 1;

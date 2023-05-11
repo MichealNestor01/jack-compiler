@@ -61,6 +61,7 @@ TokenContext *getTokenContext(Token *token)
 			return context;
 		}
 	}
+	return context;
 }
 // symbol table functions
 ParserInfo addTokenToProgramTable(Token *token)
@@ -921,6 +922,7 @@ ParserInfo letStatement()
 	{
 		return (ParserInfo){semicolonExpected, next_token};
 	}
+	free(firstTokenContext);
 	return InfoNoError;
 }
 // ifStatement→if ( expression ) { { statement } } [ else { { statement } } ]
@@ -1084,6 +1086,7 @@ ParserInfo subroutineCall()
 				}
 				// then cat class name
 				strcat(outputBuffer, firstTokenContext->type);
+				free(firstTokenContext);
 			}
 		}
 
@@ -1577,6 +1580,7 @@ ParserInfo operand()
 	else if (next_token.tp == ID)
 	{
 		Token first_token = next_token;
+
 		TokenContext *firstTokenContext = getTokenContext(&first_token);
 		Token second_token;
 
@@ -1747,6 +1751,7 @@ ParserInfo operand()
 				}
 			}
 		}
+		free(firstTokenContext);
 	}
 	else
 		return (ParserInfo){syntaxError, next_token};

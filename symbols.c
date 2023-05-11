@@ -41,6 +41,13 @@ void initScopeStack()
     scope.depth = -1;
 }
 
+void freeScopeStack()
+{
+    free(scope.bottom);
+    scope.capacity = 0;
+    scope.depth = -1;
+}
+
 /* scope manipulation functions */
 void popScope()
 {
@@ -93,6 +100,7 @@ ClassTableEntry *createClassTableEntry(char *name, char *type, char *kind, int i
     strcpy(entry->type, type);
     strcpy(entry->kind, kind);
     entry->index = index;
+    entry->table = NULL;
     return entry;
 }
 
