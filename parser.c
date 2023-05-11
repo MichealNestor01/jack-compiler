@@ -1549,7 +1549,7 @@ ParserInfo operand()
 		else if (strcmp(next_token.lx, "this") == 0)
 		{
 			if (parsedOnce)
-				fprintf(outputFile, "push pointer 0\n", next_token.lx);
+				fprintf(outputFile, "push pointer 0\n");
 			return InfoNoError;
 		}
 		else
@@ -1793,7 +1793,7 @@ ParserInfo Parse()
 	{
 	case lexerErr:
 		printf("Lexer Error at: ");
-		printToken(pi.tk);
+		// printToken(pi.tk);
 		break;
 	}
 

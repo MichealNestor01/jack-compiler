@@ -14,11 +14,6 @@ Email:
 Date Work Commenced:
 *************************************************************************/
 
-#include <dirent.h>
-#include <stdio.h>
-#include <string.h>
-#include <sys/syscall.h>
-#include <stdlib.h>
 #include "compiler.h"
 
 FILE *getOutputFile()
