@@ -852,7 +852,10 @@ ParserInfo letStatement()
 			}
 			else
 			{
-				fprintf(outputFile, "push this %d\nadd\n", firstTokenContext->kindIndex);
+				if (strcmp(firstTokenContext->kind, "static") == 0)
+					fprintf(outputFile, "push static %d\n", firstTokenContext->kindIndex);
+				else
+					fprintf(outputFile, "push this %d\nadd\n", firstTokenContext->kindIndex);
 			}
 		}
 	}
@@ -893,7 +896,10 @@ ParserInfo letStatement()
 		}
 		else
 		{
-			fprintf(outputFile, "pop this %d\n", firstTokenContext->kindIndex);
+			if (strcmp(firstTokenContext->kind, "static") == 0)
+				fprintf(outputFile, "pop static %d\n", firstTokenContext->kindIndex);
+			else
+				fprintf(outputFile, "pop this %d\n", firstTokenContext->kindIndex);
 		}
 	}
 	// ;
@@ -1066,7 +1072,10 @@ ParserInfo subroutineCall()
 				else
 				{
 					argCount++;
-					fprintf(outputFile, "push this %d\n", firstTokenContext->kindIndex);
+					if (strcmp(firstTokenContext->kind, "static") == 0)
+						fprintf(outputFile, "push static %d\n", firstTokenContext->kindIndex);
+					else
+						fprintf(outputFile, "push this %d\n", firstTokenContext->kindIndex);
 				}
 				// then cat class name
 				strcat(outputBuffer, firstTokenContext->type);
@@ -1645,7 +1654,12 @@ ParserInfo operand()
 					fprintf(outputFile, "push local %d\n", firstTokenContext->kindIndex);
 				}
 				else
-					fprintf(outputFile, "push this %d\n", firstTokenContext->kindIndex);
+				{
+					if (strcmp(firstTokenContext->kind, "static") == 0)
+						fprintf(outputFile, "push static %d\n", firstTokenContext->kindIndex);
+					else
+						fprintf(outputFile, "push this %d\n", firstTokenContext->kindIndex);
+				}
 			}
 			// check for ) skip extra recursion
 			next_token = PeekNextToken();
@@ -1718,7 +1732,12 @@ ParserInfo operand()
 				if (firstTokenContext->isLocal)
 					fprintf(outputFile, "push local %d\nadd\npop pointer 1\npush that 0\n", firstTokenContext->kindIndex);
 				else
-					fprintf(outputFile, "push this %d\nadd\n", firstTokenContext->kindIndex);
+				{
+					if (strcmp(firstTokenContext->kind, "static") == 0)
+						fprintf(outputFile, "push static %d\n", firstTokenContext->kindIndex);
+					else
+						fprintf(outputFile, "push this %d\nadd\n", firstTokenContext->kindIndex);
+				}
 			}
 		}
 		else
@@ -1735,7 +1754,10 @@ ParserInfo operand()
 				}
 				else
 				{
-					fprintf(outputFile, "push this %d\n", firstTokenContext->kindIndex);
+					if (strcmp(firstTokenContext->kind, "static") == 0)
+						fprintf(outputFile, "push static %d\n", firstTokenContext->kindIndex);
+					else
+						fprintf(outputFile, "push this %d\n", firstTokenContext->kindIndex);
 				}
 			}
 		}

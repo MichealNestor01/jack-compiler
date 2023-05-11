@@ -169,7 +169,7 @@ int StopCompiler()
 int main()
 {
 	InitCompiler();
-	ParserInfo p = compile("Average");
+	ParserInfo p = compile("Pong");
 	// PrintError(p);
 	StopCompiler();
 	return 1;
