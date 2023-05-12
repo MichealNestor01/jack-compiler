@@ -9,10 +9,10 @@ I confirm that the following code has been developed and written by me and it is
 I also confirm that I have not copied any parts of this program from another person or any other source or facilitated someone to copy this program from me.
 I confirm that I will not publish the program online or share it with anyone without permission of the module leader.
 
-Student Name:
-Student ID:
-Email:
-Date Work Commenced:
+Student Name: Micheal Nestor
+Student ID: 21492471
+Email: sc21mpn@leeds.ac.uk
+Date Work Commenced: 20/04/2023
 *************************************************************************/
 #include <stdlib.h>
 #include <stdio.h>

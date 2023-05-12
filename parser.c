@@ -20,7 +20,6 @@ char outputBuffer[128];
 // if and while counters
 int ifCount;
 int whileCount;
-int rhsIsFunction;
 
 // no error parser info
 ParserInfo InfoNoError;
@@ -865,7 +864,6 @@ ParserInfo letStatement()
 	{
 		return (ParserInfo){equalExpected, next_token};
 	}
-	rhsIsFunction = 0;
 	// expression
 	info = expression();
 	if (info.er != none)
@@ -1638,7 +1636,6 @@ ParserInfo operand()
 		next_token = PeekNextToken();
 		if (strcmp(next_token.lx, "(") == 0)
 		{
-			rhsIsFunction = 1;
 			// (
 			GetNextToken();
 			// we need to know how many arguments,
@@ -1713,7 +1710,6 @@ ParserInfo operand()
 		}
 		else if (strcmp(next_token.lx, "[") == 0)
 		{
-			rhsIsFunction = 1;
 			// [expression]
 			// eat the [
 			GetNextToken();

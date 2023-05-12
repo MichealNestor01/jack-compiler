@@ -8,10 +8,10 @@ I confirm that the following code has been developed and written by me and it is
 I also confirm that I have not copied any parts of this program from another person or any other source or facilitated someone to copy this program from me.
 I confirm that I will not publish the program online or share it with anyone without permission of the module leader.
 
-Student Name:
-Student ID:
-Email:
-Date Work Commenced:
+Student Name: Micheal Nestor
+Student ID: 201492471
+Email: sc21mpn@leeds.ac.uk
+Date Work Commenced: 04/05/2023
 *************************************************************************/
 
 #include "compiler.h"
@@ -94,7 +94,14 @@ ParserInfo compile(char *dir_name)
 			if (isJack)
 			{
 				// print the curent file
-				printf("File Found: \"%s\"\n", dir->d_name);
+				if (parseIndex == 0)
+				{
+					printf("File Found: \"%s\"\n", dir->d_name);
+				}
+				else
+				{
+					printf("Attempting To Compile: \"%s\"\n", dir->d_name);
+				}
 
 				// if we are on the second pass create the vm file
 				if (parseIndex == 1)
@@ -119,7 +126,10 @@ ParserInfo compile(char *dir_name)
 				}
 				else
 				{
-					printf("%s Parsed with no errors\n", dir->d_name);
+					if (parseIndex == 0)
+						printf("\t%s Parsed Successfully\n", dir->d_name);
+					else
+						printf("\t%s Compiled Successfully\n", dir->d_name);
 				}
 
 				// stop the parser
@@ -165,13 +175,11 @@ int StopCompiler()
 	return 1;
 }
 
-#ifndef TEST_COMPILER
-int main()
+int main(int argc, char **argv)
 {
 	InitCompiler();
-	ParserInfo p = compile("Pong");
+	ParserInfo p = compile(argv[1]);
 	// PrintError(p);
 	StopCompiler();
 	return 1;
 }
-#endif
