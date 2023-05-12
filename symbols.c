@@ -9,10 +9,10 @@ I confirm that the following code has been developed and written by me and it is
 I also confirm that I have not copied any parts of this program from another person or any other source or facilitated someone to copy this program from me.
 I confirm that I will not publish the program online or share it with anyone without permission of the module leader.
 
-Student Name:
-Student ID:
-Email:
-Date Work Commenced:
+Student Name: Micheal Nestor
+Student ID: 21492471
+Email: sc21mpn@leeds.ac.uk
+Date Work Commenced: 20/04/2023
 *************************************************************************/
 #include <stdlib.h>
 #include <stdio.h>
@@ -38,6 +38,13 @@ void initScopeStack()
 {
     scope.bottom = (unsigned long *)malloc(sizeof(unsigned long) * 30);
     scope.capacity = 29;
+    scope.depth = -1;
+}
+
+void freeScopeStack()
+{
+    free(scope.bottom);
+    scope.capacity = 0;
     scope.depth = -1;
 }
 
@@ -80,7 +87,7 @@ ProgramTableEntry *createProgramTableEntry(char *name, int index)
     ProgramTableEntry *entry = (ProgramTableEntry *)malloc(sizeof(ProgramTableEntry));
     strcpy(entry->name, name);
     entry->index = index;
-    entry->table = createClassTable();
+    entry->table = createClassTable(name);
     return entry;
 }
 
@@ -93,6 +100,7 @@ ClassTableEntry *createClassTableEntry(char *name, char *type, char *kind, int i
     strcpy(entry->type, type);
     strcpy(entry->kind, kind);
     entry->index = index;
+    entry->table = NULL;
     return entry;
 }
 
@@ -121,12 +129,13 @@ SubroutineTableEntry *createSubroutineTableEntry(char *name, char *type, char *k
     return entry;
 }
 
-ClassTable *createClassTable()
+ClassTable *createClassTable(char *name)
 {
     ClassTable *table = (ClassTable *)malloc(sizeof(ClassTable));
     table->entries = (ClassTableEntry **)malloc(10 * sizeof(ClassTableEntry *));
     table->capacity = 10;
     table->count = 0;
+    strcpy(table->name, name);
     return table;
 }
 
@@ -184,6 +193,20 @@ void addToSubroutineTable(SubroutineTable *table, SubroutineTableEntry *entry)
 {
     // work out entry's kind number
     int kindIndex = 0;
+    // if the subroutine is a method then we need to add 1 to the kind index of arguments.
+    if (strcmp(entry->kind, "argument") == 0)
+    {
+        ClassTable *classTable = (ClassTable *)getScopeClass();
+        for (int i = 0; i < classTable->count; i++)
+        {
+            if (classTable->entries[i]->table == table)
+            {
+                if (strcmp(classTable->entries[i]->kind, "method") == 0)
+                    kindIndex = 1;
+                break;
+            }
+        }
+    }
     for (int index = 0; index < table->count; index++)
     {
         if (strcmp(table->entries[index]->kind, entry->kind) == 0)

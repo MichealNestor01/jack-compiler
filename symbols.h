@@ -44,6 +44,7 @@ struct ClassTable
     ClassTableEntry **entries;
     int capacity;
     int count;
+    char name[128];
 };
 
 // struct for the subroutine symbol table
@@ -87,6 +88,7 @@ struct SubroutineTableEntry
 /*Initialisation*/
 void initSymbolTable();
 void initScopeStack();
+void freeScopeStack();
 void incrementProgramTableParsed();
 /*Stack Operations*/
 void popScope();

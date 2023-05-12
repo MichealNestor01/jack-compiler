@@ -5,6 +5,7 @@
 #include "lexer.h"
 #include "parser.h"
 #include "symbols.h"
+#include "compiler.h"
 
 // error function
 void error(char *s)
@@ -13,9 +14,54 @@ void error(char *s)
 	exit(1);
 }
 
+// output buffer
+char outputBuffer[128];
+
+// if and while counters
+int ifCount;
+int whileCount;
+
 // no error parser info
 ParserInfo InfoNoError;
 
+// code gen funtions
+typedef struct
+{
+	char type[128];
+	char kind[128];
+	int kindIndex;
+	int isLocal;
+} TokenContext;
+
+TokenContext *getTokenContext(Token *token)
+{
+	TokenContext *context = (TokenContext *)malloc(sizeof(TokenContext));
+	ClassTable *classTable = (ClassTable *)getScopeClass();
+	SubroutineTable *subTable = (SubroutineTable *)getScopeTop();
+	for (int i = 0; i < subTable->count; i++)
+	{
+		if (strcmp(subTable->entries[i]->name, token->lx) == 0)
+		{
+			strcpy(context->type, subTable->entries[i]->type);
+			strcpy(context->kind, subTable->entries[i]->kind);
+			context->kindIndex = subTable->entries[i]->kindIndex;
+			context->isLocal = 1;
+			return context;
+		}
+	}
+	context->isLocal = 0;
+	for (int i = 0; i < classTable->count; i++)
+	{
+		if (strcmp(classTable->entries[i]->name, token->lx) == 0)
+		{
+			strcpy(context->type, classTable->entries[i]->type);
+			strcpy(context->kind, classTable->entries[i]->kind);
+			context->kindIndex = classTable->entries[i]->kindIndex;
+			return context;
+		}
+	}
+	return context;
+}
 // symbol table functions
 ParserInfo addTokenToProgramTable(Token *token)
 {
@@ -410,6 +456,8 @@ ParserInfo type()
 // subroutineDeclar→( constructor|funtoin|method)( type | void ) identifier( paramList ) subroutineBody
 ParserInfo subroutineDeclar()
 {
+	ifCount = 0;
+	whileCount = 0;
 	ParserInfo info;
 	char *kindString = PeekNextToken().lx;
 	int parsedOnce = getProgramTable()->parsedOnce;
@@ -438,6 +486,7 @@ ParserInfo subroutineDeclar()
 	}
 	//  identifier
 	next_token = GetNextToken();
+	Token first_token = next_token;
 	if (next_token.tp != ID)
 		return (ParserInfo){idExpected, next_token};
 	// only add identifiers in the first parse
@@ -447,28 +496,107 @@ ParserInfo subroutineDeclar()
 		if (info.er != none)
 			return info;
 	}
-	else
-	{
-		pushSubToScope(&next_token);
-	}
 	//  (
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, "(") != 0)
 		return (ParserInfo){openParenExpected, next_token};
 	//  check for closed brackets before checking param list
 	next_token = PeekNextToken();
+	int argCount = 0;
 	if (strcmp(next_token.lx, ")") != 0)
 	{
 		// paramList
-		info = paramList();
-		if (info.er != none)
-			return info;
+		argCount++;
+		parsedOnce = getProgramTable()->parsedOnce;
+		next_token = PeekNextToken();
+		if (next_token.tp == ID ||
+			(strcmp(next_token.lx, "int") *
+			 strcmp(next_token.lx, "char") *
+			 strcmp(next_token.lx, "boolean")) == 0)
+		{
+			char *typeString = PeekNextToken().lx;
+			// type
+			ParserInfo info = type();
+			if (info.er != none)
+			{
+				return info;
+			}
+			//  indentifier
+			next_token = GetNextToken();
+			if (next_token.tp != ID)
+			{
+				return (ParserInfo){idExpected, next_token};
+			}
+			// only add identifiers in the first parse
+			if (parsedOnce == 0)
+			{
+				info = addTokenToSubroutineTable(&next_token, typeString, "argument");
+				if (info.er != none)
+					return info;
+			}
+			//  {, type identifier }
+			while (strcmp(PeekNextToken().lx, ",") == 0)
+			{
+				argCount++;
+				//  eat the ,
+				GetNextToken();
+				char *typeString = PeekNextToken().lx;
+				// type
+				ParserInfo info = type();
+				if (info.er != none)
+				{
+					return info;
+				}
+				//  identifier
+				Token next_token = GetNextToken();
+				if (next_token.tp != ID)
+				{
+					return (ParserInfo){idExpected, next_token};
+				}
+				// only add identifiers in the first parse
+				if (parsedOnce == 0)
+				{
+					info = addTokenToSubroutineTable(&next_token, typeString, "argument");
+					if (info.er != none)
+						return info;
+				}
+			}
+		}
 	}
 	// )
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, ")") != 0)
 	{
 		return (ParserInfo){closeParenExpected, next_token};
+	}
+	if (parsedOnce)
+	{
+		char *className = ((ClassTable *)getScopeTop())->name;
+		pushSubToScope(&first_token);
+		// write "function class.subName varCount" to the output file
+		int varCount = 0;
+		SubroutineTable *table = (SubroutineTable *)getScopeTop();
+		for (int i = 0; i < table->count; i++)
+		{
+			if (strcmp(table->entries[i]->kind, "var") == 0)
+				varCount++;
+		}
+		if (strcmp(kindString, "constructor") == 0)
+		{ // class fields are arguments to the constructor
+			argCount = 0;
+			ClassTable *classTable = (ClassTable *)getScopeClass();
+			for (int i = 0; i < classTable->count; i++)
+			{
+				if (strcmp(classTable->entries[i]->kind, "field") == 0)
+					argCount++;
+			}
+		}
+		FILE *outputFile = getOutputFile();
+		fprintf(outputFile, "function %s.%s %d\n", className, first_token.lx, varCount);
+		if (strcmp(kindString, "constructor") == 0)
+			fprintf(outputFile, "push constant %d\ncall Memory.alloc 1\npop pointer 0\n", argCount);
+		else if (strcmp(kindString, "method") == 0)
+			fprintf(outputFile, "push argument 0\npop pointer 0\n");
 	}
 	// subroutineBody
 	info = subroutineBody();
@@ -680,6 +808,10 @@ ParserInfo letStatement()
 	}
 	// identifier
 	next_token = GetNextToken();
+	TokenContext *firstTokenContext = getTokenContext(&next_token);
+	FILE *outputFile = getOutputFile();
+	char letTarget[128];
+	strcpy(letTarget, next_token.lx);
 	if (next_token.tp != ID)
 	{
 		return (ParserInfo){idExpected, next_token};
@@ -692,9 +824,11 @@ ParserInfo letStatement()
 			return info;
 	}
 	// [ [identifier] ]
+	int isIndexed = 0;
 	next_token = PeekNextToken();
 	if (strcmp(next_token.lx, "[") == 0)
 	{
+		isIndexed = 1;
 		// eat the "["
 		GetNextToken();
 		// expression
@@ -709,6 +843,20 @@ ParserInfo letStatement()
 		{
 			return (ParserInfo){syntaxError, next_token};
 		}
+		if (parsedOnce)
+		{
+			if (firstTokenContext->isLocal)
+			{
+				fprintf(outputFile, "push local %d\nadd\n", firstTokenContext->kindIndex);
+			}
+			else
+			{
+				if (strcmp(firstTokenContext->kind, "static") == 0)
+					fprintf(outputFile, "push static %d\n", firstTokenContext->kindIndex);
+				else
+					fprintf(outputFile, "push this %d\nadd\n", firstTokenContext->kindIndex);
+			}
+		}
 	}
 	// =
 	next_token = GetNextToken();
@@ -722,17 +870,50 @@ ParserInfo letStatement()
 	{
 		return info;
 	}
+	// write the code to assign the current register value
+	// to the target
+	if (parsedOnce)
+	{
+		FILE *outputFile = getOutputFile();
+		int found = 0;
+		if (firstTokenContext->isLocal)
+		{
+			if (strcmp(firstTokenContext->kind, "argument") == 0)
+				fprintf(outputFile, "pop argument %d\n", firstTokenContext->kindIndex);
+			else
+			{
+				if (strcmp(firstTokenContext->type, "Array") == 0 && isIndexed)
+				{
+					fprintf(outputFile, "pop temp 0\npop pointer 1\npush temp 0\npop that 0\n");
+				}
+				else
+				{
+					fprintf(outputFile, "pop local %d\n", firstTokenContext->kindIndex);
+				}
+			}
+		}
+		else
+		{
+			if (strcmp(firstTokenContext->kind, "static") == 0)
+				fprintf(outputFile, "pop static %d\n", firstTokenContext->kindIndex);
+			else
+				fprintf(outputFile, "pop this %d\n", firstTokenContext->kindIndex);
+		}
+	}
 	// ;
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, ";") != 0)
 	{
 		return (ParserInfo){semicolonExpected, next_token};
 	}
+	free(firstTokenContext);
 	return InfoNoError;
 }
 // ifStatement→if ( expression ) { { statement } } [ else { { statement } } ]
 ParserInfo ifStatement()
 {
+	int localIfCount = ifCount;
+	ifCount++;
 	// if
 	Token next_token = GetNextToken();
 	if (strcmp(next_token.lx, "if") != 0)
@@ -743,16 +924,24 @@ ParserInfo ifStatement()
 	ParserInfo info = wrappedExpression();
 	if (info.er != none)
 		return info;
-	// { { statement } }
+	// write the if statement code
+	FILE *outputFile = getOutputFile();
+	int parsedOnce = getProgramTable()->parsedOnce;
+	if (parsedOnce)
+		fprintf(outputFile, "if-goto IF_TRUE%d\ngoto IF_FALSE%d\nlabel IF_TRUE%d\n", localIfCount, localIfCount, localIfCount);
+	//   { { statement } }
 	info = wrappedZeroOrMoreStatements();
 	if (info.er != none)
 	{
 		return info;
 	}
-	// [ else { { statement } } ]
+
+	//   [ else { { statement } } ]
 	next_token = PeekNextToken();
 	if (strcmp(next_token.lx, "else") == 0)
 	{
+		if (parsedOnce)
+			fprintf(outputFile, "goto IF_END%d\nlabel IF_FALSE%d\n", localIfCount, localIfCount);
 		// eat else
 		GetNextToken();
 		// { { statement } }
@@ -761,28 +950,50 @@ ParserInfo ifStatement()
 		{
 			return info;
 		}
+		if (parsedOnce)
+			fprintf(outputFile, "label IF_END%d\n", localIfCount);
 	}
-
+	else
+	{
+		if (parsedOnce)
+			fprintf(outputFile, "label IF_FALSE%d\n", localIfCount);
+	}
 	return InfoNoError;
 }
 // whileStatement → while ( expression ) { { statement } }
 ParserInfo whileStatement()
 {
+	int localWhileCount = whileCount;
+	whileCount++;
 	// while
 	Token next_token = GetNextToken();
 	if (strcmp(next_token.lx, "while") != 0)
 	{
 		return (ParserInfo){syntaxError, next_token};
 	}
+	FILE *outputFile = getOutputFile();
+	int parsedOnce = getProgramTable()->parsedOnce;
+	if (parsedOnce)
+	{
+		fprintf(outputFile, "label WHILE_EXP%d\n", localWhileCount);
+	}
 	// ( expression )
 	ParserInfo info = wrappedExpression();
 	if (info.er != none)
 		return info;
+	if (parsedOnce)
+	{
+		fprintf(outputFile, "not\nif-goto WHILE_END%d\n", localWhileCount);
+	}
 	// { {statement} }
 	info = wrappedZeroOrMoreStatements();
 	if (info.er != none)
 	{
 		return info;
+	}
+	if (parsedOnce)
+	{
+		fprintf(outputFile, "goto WHILE_EXP%d\nlabel WHILE_END%d\n", localWhileCount, localWhileCount);
 	}
 	// successfully parsed
 	return InfoNoError;
@@ -790,16 +1001,21 @@ ParserInfo whileStatement()
 // doStatement → do subroutineCall ;
 ParserInfo doStatement()
 {
+	int parsedOnce = getProgramTable()->parsedOnce;
+	FILE *outputFile = getOutputFile();
 	// do
 	Token next_token = GetNextToken();
 	if (strcmp(next_token.lx, "do") != 0)
 	{
 		return (ParserInfo){syntaxError, next_token};
 	}
+	strcpy(outputBuffer, "call ");
 	// subroutineCall
 	ParserInfo info = subroutineCall();
 	if (info.er != none)
 		return info;
+	if (parsedOnce)
+		fprintf(outputFile, "%s\npop temp 0\n", outputBuffer);
 	// ;
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, ";") != 0)
@@ -814,16 +1030,58 @@ ParserInfo subroutineCall()
 {
 	ParserInfo info;
 	int parsedOnce = getProgramTable()->parsedOnce;
+	int argCount = 0;
 	// identifier
 	Token first_token = GetNextToken();
 	if (first_token.tp != ID)
 	{
 		return (ParserInfo){idExpected, first_token};
 	}
+
 	Token next_token = PeekNextToken();
 	// [ .identifier ]
 	if (strcmp(next_token.lx, ".") == 0)
 	{
+		int isClass = (unsigned long)getMatchingClass(&first_token);
+		if (isClass)
+		{
+			strcat(outputBuffer, first_token.lx);
+		}
+		else
+		{
+			// push object var
+			if (parsedOnce)
+			{
+
+				FILE *outputFile = getOutputFile();
+				TokenContext *firstTokenContext = getTokenContext(&first_token);
+				if (firstTokenContext->isLocal)
+				{
+					if (strcmp(firstTokenContext->kind, "var") == 0)
+					{
+						argCount++;
+						fprintf(outputFile, "push local %d\n", firstTokenContext->kindIndex);
+					}
+					else
+					{
+						fprintf(outputFile, "push %s %d\n", firstTokenContext->kind, firstTokenContext->kindIndex);
+					}
+				}
+				else
+				{
+					argCount++;
+					if (strcmp(firstTokenContext->kind, "static") == 0)
+						fprintf(outputFile, "push static %d\n", firstTokenContext->kindIndex);
+					else
+						fprintf(outputFile, "push this %d\n", firstTokenContext->kindIndex);
+				}
+				// then cat class name
+				strcat(outputBuffer, firstTokenContext->type);
+				free(firstTokenContext);
+			}
+		}
+
+		strcat(outputBuffer, ".");
 		// info = dotIdentifier();
 		// if (info.er != none)
 		//	return info;
@@ -835,10 +1093,13 @@ ParserInfo subroutineCall()
 		next_token = GetNextToken();
 		if (next_token.tp != ID)
 			return (ParserInfo){idExpected, next_token};
-		// first check if the first idenfifier exists in scope
+		strcat(outputBuffer, next_token.lx);
+		// if (strcmp(next_token.lx, "print") == 0)
+		//	argCount++;
+		//  first check if the first idenfifier exists in scope
 		//
-		// check if the first identifier is a class that has been parsed
-		// and then check if the current identifier exists in that scope
+		//  check if the first identifier is a class that has been parsed
+		//  and then check if the current identifier exists in that scope
 		if (parsedOnce)
 		{
 			info = isVarInScope(&first_token);
@@ -862,16 +1123,66 @@ ParserInfo subroutineCall()
 	}
 	else
 	{
+		argCount++;
 		// check if subroutine is in scope
 		if (parsedOnce)
 		{
 			info = isSubInScope(&first_token);
 			if (info.er != none)
 				return info;
+			// get the current class name to prepend the token
+			FILE *outputFile = getOutputFile();
+			fprintf(outputFile, "push pointer 0\n");
+			ClassTable *table = (ClassTable *)getScopeClass();
+			strcat(outputBuffer, table->name);
+			strcat(outputBuffer, ".");
+			strcat(outputBuffer, first_token.lx);
 		}
 	}
+
 	// ( expressionList )
-	return wrappedExpressionList();
+	// (
+	next_token = GetNextToken();
+	if (strcmp(next_token.lx, "(") != 0)
+	{
+		return (ParserInfo){openParenExpected, next_token};
+	}
+	// check for ) skip extra recursion
+	next_token = PeekNextToken();
+	if (strcmp(next_token.lx, ")") == 0)
+	{
+		GetNextToken();
+	}
+	else
+	{
+		argCount++;
+		// expressionList
+		info = expression();
+		if (info.er != none)
+			return info;
+		// {, expression }
+		while (strcmp(PeekNextToken().lx, ",") == 0)
+		{
+			argCount++;
+			// eat the ","
+			GetNextToken();
+			// expression
+			info = expression();
+			if (info.er != none)
+				return info;
+		}
+		// )
+		next_token = GetNextToken();
+		if (strcmp(next_token.lx, ")") != 0)
+		{
+			return (ParserInfo){closeParenExpected, next_token};
+		}
+	}
+	char count[3] = " 0\0";
+	count[1] += argCount;
+	strcat(outputBuffer, count);
+	// printf("Calling %s\n", outputBuffer);
+	return InfoNoError;
 }
 // expressoinList → expression {, expression }|ϵ
 ParserInfo expressionList()
@@ -895,14 +1206,25 @@ ParserInfo expressionList()
 // returnStatement → return [ expression ];
 ParserInfo returnStatement()
 {
+	int parsedOnce = getProgramTable()->parsedOnce;
+	FILE *outputFile = getOutputFile();
 	Token next_token = GetNextToken();
 	// return
 	if (strcmp(next_token.lx, "return") != 0)
 	{
 		return (ParserInfo){syntaxError, next_token};
 	}
-	// [ expression ]
 	next_token = PeekNextToken();
+	// check for ; first to avoid unecessary checks
+	if (strcmp(next_token.lx, ";") == 0)
+	{
+		GetNextToken();
+		if (parsedOnce)
+			fprintf(outputFile, "push constant 0\nreturn\n");
+		return InfoNoError;
+	}
+
+	// [ expression ]
 	if ((strcmp(next_token.lx, "-") *
 		 strcmp(next_token.lx, "~") *
 		 strcmp(next_token.lx, "(")) == 0 ||
@@ -915,6 +1237,8 @@ ParserInfo returnStatement()
 		if (info.er != none)
 			return info;
 	}
+	if (parsedOnce)
+		fprintf(outputFile, "return\n");
 	// ;
 	next_token = GetNextToken();
 	if (strcmp(next_token.lx, ";") != 0)
@@ -929,6 +1253,8 @@ ParserInfo returnStatement()
 ParserInfo expression()
 {
 	// relationalExpression
+	FILE *outputFile = getOutputFile();
+	int parsedOnce = getProgramTable()->parsedOnce;
 	ParserInfo info = relationalExpression();
 	if (info.er != none)
 	{
@@ -936,6 +1262,8 @@ ParserInfo expression()
 	}
 	// {( & | | ) relationalExpression }
 	Token next_token = PeekNextToken();
+	char opp[128];
+	strcpy(opp, next_token.lx);
 	while ((strcmp(next_token.lx, "&") *
 			strcmp(next_token.lx, "|")) == 0)
 	{
@@ -946,9 +1274,15 @@ ParserInfo expression()
 		if (info.er != none)
 			return info;
 		next_token = PeekNextToken();
+		if (parsedOnce)
+		{
+			if (strcmp(opp, "&") == 0)
+				fprintf(outputFile, "and\n");
+			if (strcmp(opp, "|") == 0)
+				fprintf(outputFile, "or\n");
+		}
 	}
 	// no error encountered
-
 	return InfoNoError;
 }
 // relationalExpression→ arithmeticExpression {( = | > | < ) arithmeticExpression }
@@ -964,6 +1298,10 @@ ParserInfo relationalExpression()
 			strcmp(next_token.lx, "<") *
 			strcmp(next_token.lx, ">")) == 0)
 	{
+		char operator[128];
+		strcpy(operator, next_token.lx);
+		int parsedOnce = getProgramTable()->parsedOnce;
+		FILE *outputFile = getOutputFile();
 		// eat the token
 		GetNextToken();
 		// arithmeticExpression
@@ -971,6 +1309,15 @@ ParserInfo relationalExpression()
 		if (info.er != none)
 			return info;
 		next_token = PeekNextToken();
+		if (parsedOnce)
+		{
+			if (strcmp(operator, "<") == 0)
+				fprintf(outputFile, "lt\n");
+			else if (strcmp(operator, ">") == 0)
+				fprintf(outputFile, "gt\n");
+			else if (strcmp(operator, "=") == 0)
+				fprintf(outputFile, "eq\n");
+		}
 	}
 	// no error encountered
 	return InfoNoError;
@@ -978,12 +1325,16 @@ ParserInfo relationalExpression()
 // arithmeticExpression → term {( + | - ) term }
 ParserInfo arithmeticExpression()
 {
+	int parsedOnce = getProgramTable()->parsedOnce;
+	FILE *outputFile = getOutputFile();
 	// term
 	ParserInfo info = term();
 	if (info.er != none)
 		return info;
 	// {( + | - ) term }
 	Token next_token = PeekNextToken();
+	char opp[128];
+	strcpy(opp, next_token.lx);
 	while ((strcmp(next_token.lx, "+") *
 			strcmp(next_token.lx, "-")) == 0)
 	{
@@ -993,6 +1344,13 @@ ParserInfo arithmeticExpression()
 		info = term();
 		if (info.er != none)
 			return info;
+		if (parsedOnce)
+		{
+			if (strcmp(opp, "+") == 0)
+				fprintf(outputFile, "add\n");
+			else
+				fprintf(outputFile, "sub\n");
+		}
 		next_token = PeekNextToken();
 	}
 	// no error encountered
@@ -1002,12 +1360,16 @@ ParserInfo arithmeticExpression()
 // term → factor {( * | / ) factor }
 ParserInfo term()
 {
+	int parsedOnce = getProgramTable()->parsedOnce;
+	FILE *outputFile = getOutputFile();
 	// factor
 	ParserInfo info = factor();
 	if (info.er != none)
 		return info;
 	// {( * | / ) factor }
 	Token next_token = PeekNextToken();
+	char opp[128];
+	strcpy(opp, next_token.lx);
 	while ((strcmp(next_token.lx, "*") *
 			strcmp(next_token.lx, "/")) == 0)
 	{
@@ -1017,10 +1379,16 @@ ParserInfo term()
 		info = factor();
 		if (info.er != none)
 			return info;
+		if (parsedOnce)
+		{
+			if (strcmp(opp, "*") == 0)
+				fprintf(outputFile, "call Math.multiply 2\n");
+			else
+				fprintf(outputFile, "call Math.divide 2\n");
+		}
 		next_token = PeekNextToken();
 	}
 	// if we have reached here there is a term parsed and no error
-
 	return InfoNoError;
 }
 // factor →( - | ~ |ϵ) operand
@@ -1031,12 +1399,23 @@ ParserInfo factor()
 	if ((strcmp(next_token.lx, "-") *
 		 strcmp(next_token.lx, "~")) == 0)
 	{
+
 		// eat the token before checking the operand
 		GetNextToken();
 	}
 	// ϵ (no preceding token)
 	// operand
-	return operand();
+	ParserInfo info = operand();
+	FILE *outputFile = getOutputFile();
+	int parsedOnce = getProgramTable()->parsedOnce;
+	if (parsedOnce)
+	{
+		if (strcmp(next_token.lx, "~") == 0)
+			fprintf(outputFile, "not\n");
+		if (strcmp(next_token.lx, "-") == 0)
+			fprintf(outputFile, "neg\n");
+	}
+	return info;
 }
 // dotIdentifier → .identifier
 ParserInfo dotIdentifier()
@@ -1112,29 +1491,62 @@ ParserInfo wrappedExpression()
 // operand → integerConstant | identifier [.identifier][[ expression ]|( expressionList ) ] | ( expression ) | stringLiteral | true | false | null | this
 ParserInfo operand()
 {
+	int parsedOnce = getProgramTable()->parsedOnce;
+	FILE *outputFile = getOutputFile();
 	ParserInfo info;
 	Token next_token = GetNextToken();
 	// integerConstant
 	if (next_token.tp == INT)
+	{
+		if (parsedOnce)
+			fprintf(outputFile, "push constant %s\n", next_token.lx);
 		return InfoNoError;
+	}
 	// stringLiteral
 	else if (next_token.tp == STRING)
+	{
+		if (parsedOnce)
+		{
+			int stringLength = strlen(next_token.lx);
+			fprintf(outputFile, "push constant %d\ncall String.new 1\n", stringLength);
+			for (int i = 0; i < stringLength; i++)
+			{
+				fprintf(outputFile, "push constant %d\ncall String.appendChar 2\n", next_token.lx[i]);
+			}
+		}
 		return InfoNoError;
+	}
 	// true | false | null | this
 	else if (next_token.tp == RESWORD)
 	{
 		// true
 		if (strcmp(next_token.lx, "true") == 0)
+		{
+			if (parsedOnce)
+				fprintf(outputFile, "push constant 0\nnot\n");
 			return InfoNoError;
+		}
 		// false
 		else if (strcmp(next_token.lx, "false") == 0)
+		{
+			if (parsedOnce)
+				fprintf(outputFile, "push constant 0\n");
 			return InfoNoError;
+		}
 		// null
 		else if (strcmp(next_token.lx, "null") == 0)
+		{
+			if (parsedOnce)
+				fprintf(outputFile, "push constant 0\n");
 			return InfoNoError;
+		}
 		// this
 		else if (strcmp(next_token.lx, "this") == 0)
+		{
+			if (parsedOnce)
+				fprintf(outputFile, "push pointer 0\n");
 			return InfoNoError;
+		}
 		else
 			return (ParserInfo){syntaxError, next_token}; // check this is correct
 	}
@@ -1162,8 +1574,10 @@ ParserInfo operand()
 	// identifier [ .identifier ][ [expression] | ( expressionList ) ]
 	else if (next_token.tp == ID)
 	{
-		int parsedOnce = getProgramTable()->parsedOnce;
 		Token first_token = next_token;
+
+		TokenContext *firstTokenContext = getTokenContext(&first_token);
+		Token second_token;
 
 		// check if the identifier exists
 		// ParserInfo info = isVarInScope(&next_token);
@@ -1171,9 +1585,11 @@ ParserInfo operand()
 		//	return info;
 
 		next_token = PeekNextToken();
+		int dotId = 0;
 		// [ .identifier ]
 		if (strcmp(next_token.lx, ".") == 0)
 		{
+			dotId = 1;
 			// info = dotIdentifier();
 			// if (info.er != none)
 			//	return info;
@@ -1183,6 +1599,7 @@ ParserInfo operand()
 				return (ParserInfo){syntaxError, next_token};
 			// identifier
 			next_token = GetNextToken();
+			second_token = next_token;
 			if (next_token.tp != ID)
 				return (ParserInfo){idExpected, next_token};
 			// check if the first identifier is a class that has been parsed
@@ -1209,23 +1626,87 @@ ParserInfo operand()
 		}
 		else
 		{
-			if (parsedOnce)
-			{
-				// check if the given identifier is
-				info = isVarInScope(&first_token);
-				if (info.er != none)
-					return info;
-			}
+			// check if the given identifier is
+			info = isVarInScope(&first_token);
+			if (info.er != none)
+				return info;
 		}
 		// [ [ expression ] | ( expressionList ) ] = [ expressionList ]
 		// means 0 or 1 of [expression] or (expressionList)
 		next_token = PeekNextToken();
 		if (strcmp(next_token.lx, "(") == 0)
 		{
-			// check if subroutine is in scope
-			info = wrappedExpressionList();
-			if (info.er != none)
-				return info;
+			// (
+			GetNextToken();
+			// we need to know how many arguments,
+			int argCount = 0;
+			int isClass = (unsigned long)getMatchingClass(&first_token);
+			if (!isClass && dotId && parsedOnce)
+			{
+				argCount++;
+				if (strcmp(firstTokenContext->kind, "argument") == 0)
+					fprintf(outputFile, "push argument 1\n");
+				else if (strcmp(firstTokenContext->kind, "var") == 0)
+				{
+					fprintf(outputFile, "push local %d\n", firstTokenContext->kindIndex);
+				}
+				else
+				{
+					if (strcmp(firstTokenContext->kind, "static") == 0)
+						fprintf(outputFile, "push static %d\n", firstTokenContext->kindIndex);
+					else
+						fprintf(outputFile, "push this %d\n", firstTokenContext->kindIndex);
+				}
+			}
+			// check for ) skip extra recursion
+			next_token = PeekNextToken();
+			if (strcmp(next_token.lx, ")") == 0)
+			{
+				GetNextToken();
+			}
+			else
+			{
+				// parse function arguments
+				argCount++;
+				// expressionList
+				ParserInfo info = expression();
+				if (info.er != none)
+					return info;
+				// {, expression }
+				while (strcmp(PeekNextToken().lx, ",") == 0)
+				{
+					argCount++;
+					// eat the ","
+					GetNextToken();
+					// expression
+					ParserInfo info = expression();
+					if (info.er != none)
+						return info;
+				}
+				// )
+				next_token = GetNextToken();
+				if (strcmp(next_token.lx, ")") != 0)
+				{
+					return (ParserInfo){closeParenExpected, next_token};
+				}
+			}
+
+			if (parsedOnce)
+			{
+				// you need to call a function.
+				ClassTable *classTable = (ClassTable *)getScopeClass();
+				if (!dotId)
+				{
+					fprintf(outputFile, "call %s.%s %d\n", classTable->name, first_token.lx, argCount);
+				}
+				else
+				{
+					if (!isClass)
+						fprintf(outputFile, "call %s.%s %d\n", firstTokenContext->type, second_token.lx, argCount);
+					else
+						fprintf(outputFile, "call %s.%s %d\n", first_token.lx, second_token.lx, argCount);
+				}
+			}
 		}
 		else if (strcmp(next_token.lx, "[") == 0)
 		{
@@ -1242,7 +1723,41 @@ ParserInfo operand()
 			{
 				return (ParserInfo){closeBracketExpected, next_token};
 			}
+			if (parsedOnce)
+			{
+				if (firstTokenContext->isLocal)
+					fprintf(outputFile, "push local %d\nadd\npop pointer 1\npush that 0\n", firstTokenContext->kindIndex);
+				else
+				{
+					if (strcmp(firstTokenContext->kind, "static") == 0)
+						fprintf(outputFile, "push static %d\n", firstTokenContext->kindIndex);
+					else
+						fprintf(outputFile, "push this %d\nadd\n", firstTokenContext->kindIndex);
+				}
+			}
 		}
+		else
+		{
+			// single identifier
+			if (parsedOnce)
+			{
+				if (firstTokenContext->isLocal)
+				{
+					if (strcmp(firstTokenContext->kind, "var") == 0)
+						fprintf(outputFile, "push local %d\n", firstTokenContext->kindIndex);
+					else
+						fprintf(outputFile, "push %s %d\n", firstTokenContext->kind, firstTokenContext->kindIndex);
+				}
+				else
+				{
+					if (strcmp(firstTokenContext->kind, "static") == 0)
+						fprintf(outputFile, "push static %d\n", firstTokenContext->kindIndex);
+					else
+						fprintf(outputFile, "push this %d\n", firstTokenContext->kindIndex);
+				}
+			}
+		}
+		free(firstTokenContext);
 	}
 	else
 		return (ParserInfo){syntaxError, next_token};
@@ -1284,7 +1799,7 @@ ParserInfo Parse()
 	{
 	case lexerErr:
 		printf("Lexer Error at: ");
-		printToken(pi.tk);
+		// printToken(pi.tk);
 		break;
 	}
 
@@ -1300,10 +1815,10 @@ int StopParser()
 #ifndef TEST_PARSER
 int main()
 {
-	InitParser("./testfiles/NewLineInStr2.jack");
-	ParserInfo info = Parse();
-	printf("(%d,%s) near line %d\n", info.er, info.tk.lx, info.tk.ln);
-	printf("End\n");
-	return 1;
+InitParser("./testfiles/NewLineInStr2.jack");
+ParserInfo info = Parse();
+printf("(%d,%s) near line %d\n", info.er, info.tk.lx, info.tk.ln);
+printf("End\n");
+return 1;
 }
 #endif*/
